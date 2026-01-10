@@ -1,30 +1,24 @@
-const { SlashCommandBuilder, PermissionsBitField, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, InteractionContextType, PermissionsBitField, PermissionFlagsBits } = require('discord.js');
 const { dbExecute, dbQueryOne, verifyModeratorRole, dbQueryAll} = require('../lib');
 
 module.exports = {
-  category: 'Pin Permissions',
+  category: 'Thread Management',
   commands: [
     {
       commandBuilder: new SlashCommandBuilder()
-        .setName('pin-grant')
-        .setDescription('Grant a user permission to pin messages in a specified channel')
+        .setName('grant-perms')
+        .setDescription('Grant a user permission to manage the current thread')
         .addUserOption((opt) => opt
           .setName('user')
-          .setDescription('User to grant pin permission for')
+          .setDescription('User to grant permission for')
           .setRequired(true))
-        .addChannelOption((opt) => opt
-          .setName('channel')
-          .setDescription('Channel to grant pin permissions in. Defaults to the current channel')
-          .setRequired(false))
-        .setDMPermission(false)
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+        .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
-        const channel = interaction.options.getChannel('channel', false) ?? interaction.channel;
         const user = interaction.options.getUser('user', true);
 
-        if (!channel.isTextBased() || channel.isVoiceBased()) {
+        if (!interaction.channel.isTextBased() || interaction.channel.isVoiceBased()) {
           return interaction.reply({
-            content: 'The given channel must be a text channel.',
+            content: 'The channel must be a text channel.',
             ephemeral: true,
           });
         }
@@ -37,8 +31,21 @@ module.exports = {
           });
         }
 
-        await dbExecute('REPLACE INTO pin_permissions (guildDataId, channelId, userId) VALUES (?, ?, ?)', [
-          guildData.id, channel.id, user.id
+        // Require user to either have thread perms, or perms in server
+        if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageMessages)) {
+          let sql = 'SELECT 1 FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?';
+          const permission = await dbQueryOne(sql, [guildData.id, interaction.channelId, interaction.member.id]);
+
+          if (!permission) {
+            return interaction.reply({
+              content: 'You are not able to give permissions in this channel.',
+              ephemeral: true,
+            });
+          }
+        }
+
+        await dbExecute('REPLACE INTO thread_management (guildDataId, channelId, userId) VALUES (?, ?, ?)', [
+          guildData.id, interaction.channelId, user.id
         ]);
 
         return interaction.reply({
@@ -49,23 +56,18 @@ module.exports = {
     },
     {
       commandBuilder: new SlashCommandBuilder()
-        .setName('pin-revoke')
-        .setDescription('Revoke permission for a user to pin messages in a specified channel')
+        .setName('revoke-perms')
+        .setDescription('Revoke permission for a user to manage the current thread')
         .addUserOption((opt) => opt
           .setName('user')
-          .setDescription('User to revoke pin permission for')
+          .setDescription('User to revoke permissions for')
           .setRequired(true))
-        .addChannelOption((opt) => opt
-          .setName('channel')
-          .setDescription('Channel to revoke pin permissions in. Defaults to the current channel')
-          .setRequired(false))
-        .setDMPermission(false)
+        .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
       async execute(interaction) {
-        const channel = interaction.options.getChannel('channel', false) ?? interaction.channel;
         const user = interaction.options.getUser('user', true);
 
-        const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guild.id]);
+        const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
         if (!guildData) {
           return interaction.reply({
             content: 'Unable to process request. No guild data exists for this guild. Please submit a bug report.',
@@ -73,8 +75,8 @@ module.exports = {
           });
         }
 
-        await dbExecute('DELETE FROM pin_permissions WHERE guildDataId=? AND channelId=? AND userId=?', [
-          guildData.id, channel.id, user.id
+        await dbExecute('DELETE FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?', [
+          guildData.id, interaction.channelId, user.id
         ]);
 
         return interaction.reply({
@@ -92,7 +94,7 @@ module.exports = {
           .setDescription('The ID of or link to the message to pin.')
           .setMaxLength(512)
           .setRequired(true))
-        .setDMPermission(false),
+        .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
         const permissions = interaction.channel.permissionsFor(interaction.client.user);
         if (!permissions.has(PermissionsBitField.Flags.ManageMessages)) {
@@ -116,7 +118,7 @@ module.exports = {
           });
         }
 
-        let sql = 'SELECT 1 FROM pin_permissions WHERE guildDataId=? AND channelId=? AND userId=?';
+        let sql = 'SELECT 1 FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?';
         const permission = await dbQueryOne(sql, [guildData.id, interaction.channelId, interaction.member.id]);
         if (!permission && !await verifyModeratorRole(interaction.member)) {
           return interaction.reply({
@@ -160,7 +162,7 @@ module.exports = {
           .setDescription('The ID of or link to the message to unpin.')
           .setMaxLength(512)
           .setRequired(true))
-        .setDMPermission(false),
+        .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
         const permissions = interaction.channel.permissionsFor(interaction.client.user);
         if (!permissions.has(PermissionsBitField.Flags.ManageMessages)) {
@@ -184,7 +186,7 @@ module.exports = {
           });
         }
 
-        let sql = 'SELECT 1 FROM pin_permissions WHERE guildDataId=? AND channelId=? AND userId=?';
+        let sql = 'SELECT 1 FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?';
         const permission = await dbQueryOne(sql, [guildData.id, interaction.channelId, interaction.member.id]);
         if (!permission && !await verifyModeratorRole(interaction.member)) {
           return interaction.reply({
@@ -221,13 +223,13 @@ module.exports = {
     },
     {
       commandBuilder: new SlashCommandBuilder()
-        .setName('pin-list')
-        .setDescription('List all users with pin permissions')
+        .setName('perms-list')
+        .setDescription('List all users with thread permissions')
         .addChannelOption((opt) => opt
           .setName('channel')
-          .setDescription('Channel for which pin grants will be displayed. Defaults to current channel.')
+          .setDescription('Channel for which permissions will be displayed. Defaults to current channel.')
           .setRequired(false))
-        .setDMPermission(false)
+        .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
       async execute(interaction) {
         const channel = interaction.options.getChannel('channel') ?? interaction.channel;
@@ -243,23 +245,23 @@ module.exports = {
         let sql = '';
         let results = [];
         if (channel) {
-          sql = 'SELECT channelId, userId FROM pin_permissions WHERE guildDataId=? AND channelId=?';
+          sql = 'SELECT channelId, userId FROM thread_management WHERE guildDataId=? AND channelId=?';
           results = await dbQueryAll(sql, [guildData.id, channel.id]);
         } else {
-          sql = 'SELECT channelId, userId FROM pin_permissions WHERE guildDataId=?';
+          sql = 'SELECT channelId, userId FROM thread_management WHERE guildDataId=?';
           results = await dbQueryAll(sql, [guildData.id]);
         }
 
         if (results.length === 0) {
           return interaction.reply({
-            content: `No users are authorized to pin${channel ? ' in that channel.' : '.'}`,
+            content: `No users have thread permissions${channel ? ' in that channel.' : '.'}`,
             ephemeral: true,
           });
         }
 
         let content = '';
         for (let row of results) {
-          content += `<@${row.userId}> is authorized to pin messages in <#${row.channelId}>.\n`;
+          content += `<@${row.userId}> has thread permissions in <#${row.channelId}>.\n`;
         }
 
         return interaction.reply({ content, ephemeral: true });

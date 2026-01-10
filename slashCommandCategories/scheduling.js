@@ -109,8 +109,8 @@ const sendScheduleMessage = async (interaction, targetDate, title = null, pingRo
     // Add creating user to the thread
     await threadChannel.members.add(interaction.user.id);
 
-    // Grant pin permissions for the thread to the creating user
-    await dbExecute('REPLACE INTO pin_permissions (guildDataId, channelId, userId) VALUES (?, ?, ?)', [
+    // Grant management for the thread to the creating user
+    await dbExecute('REPLACE INTO thread_management (guildDataId, channelId, userId) VALUES (?, ?, ?)', [
       guildData.id, threadChannel.id, interaction.user.id
     ]);
     await threadChannel.send(

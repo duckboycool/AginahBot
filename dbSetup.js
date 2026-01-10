@@ -109,7 +109,7 @@ const pingableRoles = `CREATE TABLE IF NOT EXISTS pingable_roles (
   UNIQUE KEY guildDataId (guildDataId, roleId)
 )`;
 
-const pinPermissions = `CREATE TABLE IF NOT EXISTS pin_permissions (
+const threadManagement = `CREATE TABLE IF NOT EXISTS thread_management (
     id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     guildDataId BIGINT UNSIGNED NOT NULL,
     channelId VARCHAR(64) NOT NULL,
@@ -148,6 +148,6 @@ db.query(modContactChannels, handler);
 db.query(messageTags, handler);
 db.query(guildOptions, handler);
 db.query(pingableRoles, handler);
-db.query(pinPermissions, handler);
+db.query(threadManagement, handler);
 db.query(scheduleBoards, handler);
 db.end();
