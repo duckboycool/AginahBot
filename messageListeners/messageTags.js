@@ -1,4 +1,4 @@
-const { dbQueryAll} = require('../lib');
+const { dbQueryOne } = require('../lib');
 
 module.exports = async (client, message) => {
   const matches = message.content.match(/&\w+\s?/g);
@@ -6,25 +6,25 @@ module.exports = async (client, message) => {
   // If there are no tags in this message, do nothing
   if (!matches) { return; }
 
-  // Remove the & and trim each tag. Also build part of the SQL query string
-  const messageTags = [];
-  let inString = '';
+  // Remove the & and trim tags, remove duplicates with a Set
+  const messageTags = new Set();
   matches.forEach((tag) => {
-    messageTags.push(tag.substring(1).trim());
-    inString += '?,';
+    messageTags.add(tag.substring(1).trim());
   });
-  inString = inString.slice(0, -1);
+  
+  // Send each tag message to the channel in a separate message, in order of message
+  for (let tag of messageTags) {
+    // Fetch the tag message from the database
+    let sql = `SELECT mt.tagContent
+               FROM message_tags mt
+               JOIN guild_data gd ON mt.guildDataId = gd.id
+               WHERE gd.guildId=?
+                  AND mt.tagName=?`;
+    const row = await dbQueryOne(sql, [message.guild.id, tag]);
 
-  // Fetch the tag messages from the database
-  let sql = `SELECT mt.tagContent
-             FROM message_tags mt
-             JOIN guild_data gd ON mt.guildDataId = gd.id
-             WHERE gd.guildId=?
-                AND mt.tagName IN (${inString})`;
-  const rows = await dbQueryAll(sql, [message.guild.id, ...messageTags]);
-
-  // Send each tag message to the channel in a separate message
-  for (let row of rows) {
-    await message.channel.send(row.tagContent);
+    console.log(`Sending ${tag}...`);
+    if (row != null) {
+      await message.channel.send(row.tagContent);
+    }
   }
 };
