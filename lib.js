@@ -6,6 +6,10 @@ const { generalErrorHandler } = require('./errorHandlers');
 
 module.exports = {
   managesThread: async (guildId, interaction) => {
+    if (interaction.channel.ownerId === interaction.user.id) {
+      return true;
+    }
+
     let sql = 'SELECT 1 FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?';
     const permission = !!await module.exports.dbQueryOne(sql, [guildId, interaction.channelId, interaction.member.id]);
     return permission || await module.exports.verifyModeratorRole(interaction.member);
