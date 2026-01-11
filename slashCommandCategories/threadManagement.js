@@ -422,5 +422,49 @@ module.exports = {
         await interaction.respond(matches.map((tag) => ({ name: tag.name, value: tag.name })));
       },
     },
+    {
+      commandBuilder: new SlashCommandBuilder()
+        .setName('set-title')
+        .setDescription('Change title of current thread')
+        .addStringOption((opt) => opt
+          .setName('title')
+          .setDescription('The new title to set the thread to.')
+          .setMaxLength(100)
+          .setRequired(true))
+        .setContexts(InteractionContextType.Guild),
+      async execute(interaction) {
+        const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
+        if (!guildData) {
+          return interaction.reply({
+            content: 'Unable to process request. No guild data exists for this guild. Please submit a bug report.',
+            ephemeral: true,
+          });
+        }
+
+        let sql = 'SELECT 1 FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?';
+        const permission = await dbQueryOne(sql, [guildData.id, interaction.channelId, interaction.member.id]);
+        if (!permission && !await verifyModeratorRole(interaction.member)) {
+          return interaction.reply({
+            content: 'You do not have permission to edit the title in this channel.',
+            ephemeral: true,
+          });
+        }
+
+        if (!interaction.channel.isThread()) {
+          return interaction.reply({
+            content: 'Cannot change title outside of a thread.',
+            ephemeral: true,
+          });
+        }
+
+        const name = interaction.options.getString('title');
+        await interaction.channel.setName(name);
+
+        return interaction.reply({
+          content: 'Changed title.',
+          ephemeral: true,
+        });
+      },
+    },
   ],
 };
