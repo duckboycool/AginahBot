@@ -158,6 +158,17 @@ client.on(Events.InteractionCreate, async(interaction) => {
     // If this slash command has no known listener, notify the user and log a warning
     console.warn(`Unknown slash command received: ${interaction.commandName}`);
     return interaction.reply('Unknown command.');
+  } else if (interaction.isAutocomplete()) {
+    for (const category of client.slashCommandCategories) {
+      for (const listener of category.commands) {
+        if (listener.commandBuilder.name === interaction.commandName) {
+          return listener.autocomplete(interaction);
+        }
+      }
+    }
+
+    // If the corresponding slash command has no known listener, log a warning
+    console.warn(`Unknown slash command autocomplete received: ${interaction.commandName}`);
   }
 
   // All other interactions are grouped together and handled independently

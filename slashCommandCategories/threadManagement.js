@@ -275,7 +275,8 @@ module.exports = {
           .setName('tag')
           .setDescription('Tag name to add to the post.')
           .setMaxLength(20)
-          .setRequired(true))
+          .setRequired(true)
+          .setAutocomplete(true))
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
         const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
@@ -330,6 +331,19 @@ module.exports = {
           ephemeral: true,
         });
       },
+      async autocomplete(interaction) {
+        if (!interaction.channel.parent?.isThreadOnly()) {
+          await interaction.respond([]);
+          return;
+        }
+
+        const curValue = interaction.options.getFocused();
+        const matches = interaction.channel.parent.availableTags.filter(
+          (tag) => tag.name.includes(curValue) && !interaction.channel.appliedTags.includes(tag.id)
+        );
+
+        await interaction.respond(matches.map((tag) => ({ name: tag.name, value: tag.name })));
+      },
     },
     {
       commandBuilder: new SlashCommandBuilder()
@@ -339,7 +353,8 @@ module.exports = {
           .setName('tag')
           .setDescription('Tag name to remove from the post.')
           .setMaxLength(20)
-          .setRequired(true))
+          .setRequired(true)
+          .setAutocomplete(true))
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
         const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
@@ -392,6 +407,19 @@ module.exports = {
           content: 'Removed tag.',
           ephemeral: true,
         });
+      },
+      async autocomplete(interaction) {
+        if (!interaction.channel.parent?.isThreadOnly()) {
+          await interaction.respond([]);
+          return;
+        }
+
+        const curValue = interaction.options.getFocused();
+        const matches = interaction.channel.parent.availableTags.filter(
+          (tag) => tag.name.includes(curValue) && interaction.channel.appliedTags.includes(tag.id)
+        );
+
+        await interaction.respond(matches.map((tag) => ({ name: tag.name, value: tag.name })));
       },
     },
   ],
