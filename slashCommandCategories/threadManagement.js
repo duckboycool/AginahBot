@@ -337,9 +337,9 @@ module.exports = {
           return;
         }
 
-        const curValue = interaction.options.getFocused();
+        const curValue = interaction.options.getFocused().toLowerCase();
         const matches = interaction.channel.parent.availableTags.filter(
-          (tag) => tag.name.includes(curValue) && !interaction.channel.appliedTags.includes(tag.id)
+          (tag) => tag.name.toLowerCase().includes(curValue) && !interaction.channel.appliedTags.includes(tag.id)
         );
 
         await interaction.respond(matches.map((tag) => ({ name: tag.name, value: tag.name })));
@@ -414,9 +414,9 @@ module.exports = {
           return;
         }
 
-        const curValue = interaction.options.getFocused();
+        const curValue = interaction.options.getFocused().toLowerCase();
         const matches = interaction.channel.parent.availableTags.filter(
-          (tag) => tag.name.includes(curValue) && interaction.channel.appliedTags.includes(tag.id)
+          (tag) => tag.name.toLowerCase().includes(curValue) && interaction.channel.appliedTags.includes(tag.id)
         );
 
         await interaction.respond(matches.map((tag) => ({ name: tag.name, value: tag.name })));
