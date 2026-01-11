@@ -44,10 +44,33 @@ module.exports = {
           }
         }
 
-        await dbExecute('REPLACE INTO thread_management (guildDataId, channelId, userId) VALUES (?, ?, ?)', [
-          guildData.id, interaction.channelId, user.id
-        ]);
+        try {
+          await dbExecute('INSERT INTO thread_management (guildDataId, channelId, userId) VALUES (?, ?, ?)', [
+            guildData.id, interaction.channelId, user.id
+          ]);
+        } catch (err) {
+          if (err.code === 'ER_DUP_ENTRY') {
+            return interaction.reply({
+              content: 'Specified user already has permissions.',
+              ephemeral: true,
+            });
+          } else {
+            return interaction.reply({
+              content: 'Error adding permissions.',
+              ephemeral: true,
+            });
+          }
+        }
 
+        let grantMessage = `${user}, you have been granted management perms in this channel. You can use \`/pin\` `
+                         + 'and `/unpin` to manage pins, ';
+        // In forum channel
+        if (interaction.channel.parent?.isThreadOnly()) {
+          grantMessage += '`/tag-thread` and `/untag-thread` to manage tags, `/set-title` to change the title, ';
+        }
+        grantMessage += 'and `/grant-perms` to give others these permissions.';
+
+        await interaction.channel.send(grantMessage);
         return interaction.reply({
           content: 'Permission granted.',
           ephemeral: true,
