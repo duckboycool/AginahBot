@@ -114,7 +114,8 @@ const sendScheduleMessage = async (interaction, targetDate, title = null, pingRo
       guildData.id, threadChannel.id, interaction.user.id
     ]);
     await threadChannel.send(
-      `${interaction.user} has been granted pin permissions in this channel. Use \`/pin\` and \`/unpin\`.`
+      `${interaction.user} has been granted management perms in this channel. Use \`/pin\` and \`/unpin\` `
+       + 'to manage pins, `/set-title` to change the title, and `/grant-perms` to to give others these permissions.'
     );
   }
 

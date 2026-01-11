@@ -60,7 +60,10 @@ module.exports = {
                          + 'and `/unpin` to manage pins, ';
         // In forum channel
         if (interaction.channel.parent?.isThreadOnly()) {
-          grantMessage += '`/tag-thread` and `/untag-thread` to manage tags, `/set-title` to change the title, ';
+          grantMessage += '`/tag-thread` and `/untag-thread` to manage tags, ';
+        }
+        if (interaction.channel.isThread()) {
+          grantMessage += '`/set-title` to change the title, ';
         }
         grantMessage += 'and `/grant-perms` to give others these permissions.';
 
