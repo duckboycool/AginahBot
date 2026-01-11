@@ -267,5 +267,132 @@ module.exports = {
         return interaction.reply({ content, ephemeral: true });
       },
     },
+    {
+      commandBuilder: new SlashCommandBuilder()
+        .setName('tag-thread')
+        .setDescription('Add a tag to the current thread')
+        .addStringOption((opt) => opt
+          .setName('tag')
+          .setDescription('Tag name to add to the post.')
+          .setMaxLength(20)
+          .setRequired(true))
+        .setContexts(InteractionContextType.Guild),
+      async execute(interaction) {
+        const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
+        if (!guildData) {
+          return interaction.reply({
+            content: 'Unable to process request. No guild data exists for this guild. Please submit a bug report.',
+            ephemeral: true,
+          });
+        }
+
+        let sql = 'SELECT 1 FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?';
+        const permission = await dbQueryOne(sql, [guildData.id, interaction.channelId, interaction.member.id]);
+        if (!permission && !await verifyModeratorRole(interaction.member)) {
+          return interaction.reply({
+            content: 'You do not have permission to edit tags in this channel.',
+            ephemeral: true,
+          });
+        }
+
+        if (!interaction.channel.parent?.isThreadOnly()) {
+          return interaction.reply({
+            content: 'Cannot add tags outside of a forum thread.',
+            ephemeral: true,
+          });
+        }
+
+        const tagName = interaction.options.getString('tag');
+        const tag = interaction.channel.parent.availableTags.find(
+          (tag) => tag.name.toLowerCase() === tagName.toLowerCase()
+        );
+
+        if (!tag) {
+          return interaction.reply({
+            content: `Tag \`${tagName}\` is invalid.`,
+            ephemeral: true,
+          });
+        }
+
+        let channelTags = interaction.channel.appliedTags;
+        if (channelTags.includes(tag.id)) {
+          return interaction.reply({
+            content: `Tag \`${tag.name}\` already on post.`,
+            ephemeral: true,
+          });
+        }
+
+        channelTags.push(tag.id);
+        await interaction.channel.setAppliedTags(channelTags);
+
+        return interaction.reply({
+          content: 'Added tag.',
+          ephemeral: true,
+        });
+      },
+    },
+    {
+      commandBuilder: new SlashCommandBuilder()
+        .setName('untag-thread')
+        .setDescription('Remove a tag from the current thread')
+        .addStringOption((opt) => opt
+          .setName('tag')
+          .setDescription('Tag name to remove from the post.')
+          .setMaxLength(20)
+          .setRequired(true))
+        .setContexts(InteractionContextType.Guild),
+      async execute(interaction) {
+        const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
+        if (!guildData) {
+          return interaction.reply({
+            content: 'Unable to process request. No guild data exists for this guild. Please submit a bug report.',
+            ephemeral: true,
+          });
+        }
+
+        let sql = 'SELECT 1 FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?';
+        const permission = await dbQueryOne(sql, [guildData.id, interaction.channelId, interaction.member.id]);
+        if (!permission && !await verifyModeratorRole(interaction.member)) {
+          return interaction.reply({
+            content: 'You do not have permission to edit tags in this channel.',
+            ephemeral: true,
+          });
+        }
+
+        if (!interaction.channel.parent?.isThreadOnly()) {
+          return interaction.reply({
+            content: 'Cannot remove tags outside of a forum thread.',
+            ephemeral: true,
+          });
+        }
+
+        const tagName = interaction.options.getString('tag');
+        const tag = interaction.channel.parent.availableTags.find(
+          (tag) => tag.name.toLowerCase() === tagName.toLowerCase()
+        );
+
+        if (!tag) {
+          return interaction.reply({
+            content: `Tag \`${tagName}\` is invalid.`,
+            ephemeral: true,
+          });
+        }
+
+        let channelTags = interaction.channel.appliedTags;
+        if (!channelTags.includes(tag.id)) {
+          return interaction.reply({
+            content: `Tag \`${tag.name}\` not on post.`,
+            ephemeral: true,
+          });
+        }
+
+        await interaction.channel.setAppliedTags(channelTags.filter((id) => id !== tag.id));
+
+        return interaction.reply({
+          content: 'Removed tag.',
+          ephemeral: true,
+        });
+      },
+    },
   ],
 };
