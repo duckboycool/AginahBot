@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, InteractionContextType, PermissionsBitField, PermissionFlagsBits } = require('discord.js');
-const { dbExecute, dbQueryOne, verifyModeratorRole, dbQueryAll} = require('../lib');
+const { dbExecute, dbQueryOne, managesThread, dbQueryAll } = require('../lib');
 
 module.exports = {
   category: 'Thread Management',
@@ -31,17 +31,11 @@ module.exports = {
           });
         }
 
-        // Require user to either have thread perms, or perms in server
-        if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageMessages)) {
-          let sql = 'SELECT 1 FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?';
-          const permission = await dbQueryOne(sql, [guildData.id, interaction.channelId, interaction.member.id]);
-
-          if (!permission) {
-            return interaction.reply({
-              content: 'You are not able to give permissions in this channel.',
-              ephemeral: true,
-            });
-          }
+        if (!await managesThread(guildData.id, interaction)) {
+          return interaction.reply({
+            content: 'You are not able to give permissions in this channel.',
+            ephemeral: true,
+          });
         }
 
         try {
@@ -141,9 +135,7 @@ module.exports = {
           });
         }
 
-        let sql = 'SELECT 1 FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?';
-        const permission = await dbQueryOne(sql, [guildData.id, interaction.channelId, interaction.member.id]);
-        if (!permission && !await verifyModeratorRole(interaction.member)) {
+        if (!await managesThread(guildData.id, interaction)) {
           return interaction.reply({
             content: 'You do not have permission to pin messages in this channel.',
             ephemeral: true,
@@ -209,9 +201,7 @@ module.exports = {
           });
         }
 
-        let sql = 'SELECT 1 FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?';
-        const permission = await dbQueryOne(sql, [guildData.id, interaction.channelId, interaction.member.id]);
-        if (!permission && !await verifyModeratorRole(interaction.member)) {
+        if (!await managesThread(guildData.id, interaction)) {
           return interaction.reply({
             content: 'You do not have permission to unpin messages in this channel.',
             ephemeral: true,
@@ -310,9 +300,7 @@ module.exports = {
           });
         }
 
-        let sql = 'SELECT 1 FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?';
-        const permission = await dbQueryOne(sql, [guildData.id, interaction.channelId, interaction.member.id]);
-        if (!permission && !await verifyModeratorRole(interaction.member)) {
+        if (!await managesThread(guildData.id, interaction)) {
           return interaction.reply({
             content: 'You do not have permission to edit tags in this channel.',
             ephemeral: true,
@@ -388,9 +376,7 @@ module.exports = {
           });
         }
 
-        let sql = 'SELECT 1 FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?';
-        const permission = await dbQueryOne(sql, [guildData.id, interaction.channelId, interaction.member.id]);
-        if (!permission && !await verifyModeratorRole(interaction.member)) {
+        if (!await managesThread(guildData.id, interaction)) {
           return interaction.reply({
             content: 'You do not have permission to edit tags in this channel.',
             ephemeral: true,
@@ -464,9 +450,7 @@ module.exports = {
           });
         }
 
-        let sql = 'SELECT 1 FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?';
-        const permission = await dbQueryOne(sql, [guildData.id, interaction.channelId, interaction.member.id]);
-        if (!permission && !await verifyModeratorRole(interaction.member)) {
+        if (!await managesThread(guildData.id, interaction)) {
           return interaction.reply({
             content: 'You do not have permission to edit the title in this channel.',
             ephemeral: true,

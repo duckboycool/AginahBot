@@ -5,6 +5,12 @@ const config = require('./config.json');
 const { generalErrorHandler } = require('./errorHandlers');
 
 module.exports = {
+  managesThread: async (guildId, interaction) => {
+    let sql = 'SELECT 1 FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?';
+    const permission = !!await module.exports.dbQueryOne(sql, [guildId, interaction.channelId, interaction.member.id]);
+    return permission || await module.exports.verifyModeratorRole(interaction.member);
+  },
+
   // Function which returns a promise which will resolve to true or false
   verifyModeratorRole: (guildMember) => new Promise(async (resolve) => {
     if (module.exports.verifyIsAdmin(guildMember)) { resolve(true); }
