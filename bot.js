@@ -26,6 +26,7 @@ client.reactionListeners = [];
 client.interactionListeners = [];
 client.voiceStateListeners = [];
 client.roleDeletedListeners = [];
+client.lastTagUse = new Map(); // For cooldown, doesn't really need to be persistently stored in DB
 
 // Load routines and run them once per hour
 fs.readdirSync('./routines').filter((file) => file.endsWith('.js')).forEach((routineFile) => {
