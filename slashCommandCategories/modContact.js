@@ -1,6 +1,6 @@
 const { dbQueryOne, dbExecute, getModeratorRole } = require('../lib');
 const { ButtonBuilder, ButtonStyle, ChannelType, PermissionsBitField, ActionRowBuilder,
-  SlashCommandBuilder, PermissionFlagsBits, Client, Guild, GuildMember, TextChannel } = require('discord.js');
+  SlashCommandBuilder, PermissionFlagsBits, Guild, GuildMember, TextChannel } = require('discord.js');
 
 module.exports = {
   category: 'Mod Contact',
@@ -88,8 +88,9 @@ module.exports = {
           return interaction.followUp('Mod contact feature enabled on this server.');
         } catch (e) {
           console.error(e);
-          return interaction.followUp('Something went wrong and the Mod Contact feature could not be enabled ' +
-            'on this server. Please report this bug on [AginahBot\'s Discord](https://discord.gg/2EZNrAw9Ja)');
+          return interaction.followUp(
+            replyError('Something went wrong and the Mod Contact feature could not be enabled on this server.\n')
+          );
         }
       },
     },
@@ -133,8 +134,9 @@ module.exports = {
           return interaction.followUp('Mod contact feature disabled on this server.');
         } catch (e) {
           console.error(e);
-          return interaction.followUp('Something went wrong and the Mod Contact feature could not be enabled ' +
-            'on this server. Please report this bug on [AginahBot\'s Discord](https://discord.gg/2EZNrAw9Ja)');
+          return interaction.followUp(
+            replyError('Something went wrong and the Mod Contact feature could not be enabled on this server.\n')
+          );
         }
       },
     },
@@ -194,8 +196,9 @@ module.exports = {
 
         } catch (e) {
           console.error(e);
-          return interaction.followUp('Something went wrong and the Mod Contact feature could not be enabled ' +
-            'on this server. Please report this bug on [AginahBot\'s Discord](https://discord.gg/2EZNrAw9Ja)');
+          return interaction.followUp(
+            replyError('Something went wrong and the Mod Contact feature could not be enabled on this server.\n')
+          );
         }
       },
     },
@@ -238,8 +241,9 @@ module.exports = {
           return interaction.channel.delete();
         } catch (e) {
           console.error(e);
-          return interaction.followUp('Something went wrong and the Mod Contact feature could not be enabled ' +
-            'on this server. Please report this bug on [AginahBot\'s Discord](https://discord.gg/2EZNrAw9Ja)');
+          return interaction.followUp(
+            replyError('Something went wrong and the Mod Contact feature could not be enabled on this server.\n')
+          );
         }
       },
     },

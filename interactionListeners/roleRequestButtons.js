@@ -1,3 +1,6 @@
+const { replyError } = require('../lib');
+const { MessageFlags } = require('discord.js');
+
 module.exports = async (client, interaction) => {
   // Only listen for button interactions
   if (!interaction.isButton()) { return; }
@@ -28,9 +31,8 @@ module.exports = async (client, interaction) => {
     }
   } catch (e) {
     return interaction.reply({
-      ephemeral: true,
-      content: 'Something went wrong and your roles could not be updated.\n' +
-        'Please report this bug on [AginahBot\'s Discord](https://discord.gg/2EZNrAw9Ja)',
+      content: replyError('Something went wrong and your roles could not be updated.\n'),
+      flags: MessageFlags.Ephemeral,
     });
   }
 };

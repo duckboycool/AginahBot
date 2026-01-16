@@ -1,5 +1,6 @@
-const { SlashCommandBuilder, InteractionContextType, PermissionsBitField, PermissionFlagsBits } = require('discord.js');
-const { dbExecute, dbQueryOne, managesThread, dbQueryAll } = require('../lib');
+const { dbExecute, dbQueryOne, managesThread, dbQueryAll, replyError } = require('../lib');
+const { SlashCommandBuilder, InteractionContextType, MessageFlags, PermissionsBitField,
+  PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
   category: 'Thread Management',
@@ -26,8 +27,8 @@ module.exports = {
         const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guild.id]);
         if (!guildData) {
           return interaction.reply({
-            content: 'Unable to process request. No guild data exists for this guild. Please submit a bug report.',
-            ephemeral: true,
+            content: replyError('Unable to process request. No guild data exists for this guild. '),
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -90,8 +91,8 @@ module.exports = {
         const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
         if (!guildData) {
           return interaction.reply({
-            content: 'Unable to process request. No guild data exists for this guild. Please submit a bug report.',
-            ephemeral: true,
+            content: replyError('Unable to process request. No guild data exists for this guild. '),
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -133,8 +134,8 @@ module.exports = {
         const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guild.id]);
         if (!guildData) {
           return interaction.reply({
-            content: 'Unable to process request. No guild data exists for this guild. Please submit a bug report.',
-            ephemeral: true,
+            content: replyError('Unable to process request. No guild data exists for this guild. '),
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -199,8 +200,8 @@ module.exports = {
         const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guild.id]);
         if (!guildData) {
           return interaction.reply({
-            content: 'Unable to process request. No guild data exists for this guild. Please submit a bug report.',
-            ephemeral: true,
+            content: replyError('Unable to process request. No guild data exists for this guild. '),
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -253,8 +254,8 @@ module.exports = {
         const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guild.id]);
         if (!guildData) {
           return interaction.reply({
-            content: 'Unable to process request. No guild data exists for this guild. Please submit a bug report.',
-            ephemeral: true,
+            content: replyError('Unable to process request. No guild data exists for this guild. '),
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -298,8 +299,8 @@ module.exports = {
         const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
         if (!guildData) {
           return interaction.reply({
-            content: 'Unable to process request. No guild data exists for this guild. Please submit a bug report.',
-            ephemeral: true,
+            content: replyError('Unable to process request. No guild data exists for this guild. '),
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -374,8 +375,8 @@ module.exports = {
         const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
         if (!guildData) {
           return interaction.reply({
-            content: 'Unable to process request. No guild data exists for this guild. Please submit a bug report.',
-            ephemeral: true,
+            content: replyError('Unable to process request. No guild data exists for this guild. '),
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -448,8 +449,8 @@ module.exports = {
         const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
         if (!guildData) {
           return interaction.reply({
-            content: 'Unable to process request. No guild data exists for this guild. Please submit a bug report.',
-            ephemeral: true,
+            content: replyError('Unable to process request. No guild data exists for this guild. '),
+            flags: MessageFlags.Ephemeral,
           });
         }
 

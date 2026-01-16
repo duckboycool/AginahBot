@@ -675,4 +675,12 @@ module.exports = {
 
     await categoryMessage.edit(messageData);
   },
+
+  replyError: (error) => {
+    const errorId = Math.floor(Math.random() * 900_000) + 100_000;
+    const reportString = `Please report this bug in <#1075616226342096927>. (error id: ${errorId})`;
+
+    console.error(`[${errorId}] - ${error}`);
+    return error + reportString;
+  }
 };

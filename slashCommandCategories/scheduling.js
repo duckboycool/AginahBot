@@ -226,8 +226,7 @@ module.exports = {
           }
         } catch(e) {
           console.error(e);
-          return interaction.followUp('Something went wrong and the scheduled events could not be listed.\n' +
-            'Please report this bug on [AginahBot\'s Discord](https://discord.gg/2EZNrAw9Ja)');
+          return interaction.followUp(replyError('Something went wrong and the scheduled events could not be listed.\n'));
         }
       }
     },
@@ -344,8 +343,7 @@ module.exports = {
           return interaction.followUp('New event created.');
         } catch (e) {
           console.error(e);
-          return interaction.followUp('Something went wrong and the event could not be created.\n' +
-            'Please report this bug on [AginahBot\'s Discord](https://discord.gg/2EZNrAw9Ja)');
+          return interaction.followUp(replyError('Something went wrong and the event could not be created.\n'));
         }
       }
     },
@@ -400,8 +398,7 @@ module.exports = {
           return interaction.followUp('New event created.');
         } catch (e) {
           console.error(e);
-          return interaction.followUp('Something went wrong and the event could not be created.\n' +
-            'Please report this bug on [AginahBot\'s Discord](https://discord.gg/2EZNrAw9Ja)');
+          return interaction.followUp(replyError('Something went wrong and the event could not be created.\n'));
         }
       }
     },
@@ -461,8 +458,7 @@ module.exports = {
           return interaction.followUp('New event created.');
         } catch (e) {
           console.error(e);
-          return interaction.followUp('Something went wrong and the event could not be created.\n' +
-            'Please report this bug on [AginahBot\'s Discord](https://discord.gg/2EZNrAw9Ja)');
+          return interaction.followUp(replyError('Something went wrong and the event could not be created.\n'));
         }
       }
     },
@@ -665,8 +661,7 @@ module.exports = {
           return interaction.followUp(`Event with code ${eventCode.toUpperCase()} has been cancelled.`);
         } catch(e) {
           console.error(e);
-          return interaction.followUp('Something went wrong and the event could not be cancelled.\n' +
-            'Please report this bug on [AginahBot\'s Discord](https://discord.gg/2EZNrAw9Ja)');
+          return interaction.followUp(replyError('Something went wrong and the event could not be cancelled.\n'));
         }
       }
     },
@@ -721,8 +716,7 @@ module.exports = {
           return interaction.followUp('Schedule board created.');
         } catch (e) {
           console.error(e);
-          return interaction.followUp('Something went wrong and the schedule board could not be created.\n' +
-            'Please report this bug on [AginahBot\'s Discord](https://discord.gg/2EZNrAw9Ja)');
+          return interaction.followUp(replyError('Something went wrong and the schedule board could not be created.\n'));
         }
       }
     },
@@ -759,8 +753,7 @@ module.exports = {
           return interaction.followUp('Schedule board deleted.');
         } catch (e) {
           console.error(e);
-          return interaction.followUp('Something went wrong and the schedule board could not be deleted.\n' +
-            'Please report this bug on [AginahBot\'s Discord](https://discord.gg/2EZNrAw9Ja)');
+          return interaction.followUp(replyError('Something went wrong and the schedule board could not be deleted.\n'));
         }
       }
     },

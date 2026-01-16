@@ -1,5 +1,5 @@
-const { dbQueryOne, dbQueryAll, dbExecute } = require('../lib');
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { dbQueryOne, dbQueryAll, dbExecute, replyError } = require('../lib');
+const { SlashCommandBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
   category: 'Message Tags',
@@ -37,10 +37,9 @@ module.exports = {
         const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
         if (!guildData) {
           return interaction.reply({
-            content: 'Uh-oh. Something is weird in my database. Please report this bug at:\n' +
-              'https://discord.gg/2EZNrAw9Ja.\n\nPaste this error message into the `#bug-reports` channel:\n' +
-              `\`\`\`guild data is missing for guild with id ${interaction.guildId}\`\`\``,
-            ephemeral: true,
+            content: replyError('Uh-oh. Something is weird in my database.\n' + 
+              `\`\`\`guild data is missing for guild with id ${interaction.guildId}\`\`\`\n`),
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -72,10 +71,9 @@ module.exports = {
         const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
         if (!guildData) {
           return interaction.reply({
-            content: 'Uh-oh. Something is weird in my database. Please report this bug at:\n' +
-              'https://discord.gg/2EZNrAw9Ja.\n\nPaste this error message into the `#bug-reports` channel:\n' +
-              `\`\`\`guild data is missing for guild with id ${interaction.guildId}\`\`\``,
-            ephemeral: true,
+            content: replyError('Uh-oh. Something is weird in my database.\n' + 
+              `\`\`\`guild data is missing for guild with id ${interaction.guildId}\`\`\`\n`),
+            flags: MessageFlags.Ephemeral,
           });
         }
 

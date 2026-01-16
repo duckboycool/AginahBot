@@ -1,4 +1,4 @@
-const { dbQueryOne, dbExecute } = require('../lib');
+const { dbQueryOne, dbExecute, replyError } = require('../lib');
 const { ChannelType, SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 
 const VOICE_CHANNEL_NAME = 'Create Room';
@@ -53,8 +53,7 @@ module.exports = {
           return interaction.followUp(`Created room system ${categoryName}.`);
         } catch (e) {
           console.error(e);
-          return interaction.followUp('Something went wrong and the room system could not be created.\n' +
-            'Please report this bug on [AginahBot\'s Discord](https://discord.gg/2EZNrAw9Ja)');
+          return interaction.followUp(replyError('Something went wrong and the room system could not be created.\n'));
         }
       }
     },
@@ -110,8 +109,7 @@ module.exports = {
           return interaction.followUp(`Destroyed dynamic room system ${categoryName}.`);
         } catch (e) {
           console.error(e);
-          return interaction.followUp('Something went wrong and the room system could not be deleted.\n' +
-            'Please report this bug on [AginahBot\'s Discord](https://discord.gg/2EZNrAw9Ja)');
+          return interaction.followUp(replyError('Something went wrong and the room system could not be deleted.\n'));
         }
       }
     },
