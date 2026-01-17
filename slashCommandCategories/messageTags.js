@@ -29,7 +29,7 @@ module.exports = {
         if (tagName.search(/\W/) > -1) {
           return interaction.reply({
             content: 'Tag names may contain only letters, numbers, and underscores.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -50,7 +50,7 @@ module.exports = {
 
         return interaction.reply({
           content: `Set content for tag \`${tagName.toLowerCase()}\`.`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       },
     },
@@ -87,7 +87,7 @@ module.exports = {
         if (!existing) {
           return interaction.reply({
             content: 'That tag does not exist on this server.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -98,7 +98,7 @@ module.exports = {
 
         return interaction.reply({
           content: `Deleted tag \`${tagName.toLowerCase()}\`.`,
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       }
     },

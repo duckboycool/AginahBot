@@ -28,7 +28,7 @@ module.exports = {
           });
         }
 
-        await interaction.deferReply({ ephemeral: true });
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
         interaction.guild.channels.create({
           name: 'role-request',
           type: ChannelType.GuildText,
@@ -54,7 +54,7 @@ module.exports = {
               'power comes great responsibility.');
           return interaction.followUp({
             content: 'Role system enabled.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }).catch((e) => {
           console.error(e);
@@ -77,12 +77,12 @@ module.exports = {
           // If the role system does not exist, there is no need to attempt to delete it
           return interaction.reply({
             content: 'The role system is not currently installed on this server.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
         try{
-          await interaction.deferReply({ ephemeral: true });
+          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
           // Loop over the role categories and delete them
           sql = 'SELECT id FROM role_categories WHERE roleSystemId=?';
@@ -130,7 +130,7 @@ module.exports = {
         if (!roleSystem) {
           return interaction.reply({
             content: 'The role system has not been setup on this server.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -143,12 +143,12 @@ module.exports = {
         if (row) {
           return interaction.reply({
             content: 'That role category already exists!',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
         try {
-          await interaction.deferReply({ ephemeral: true });
+          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
           // Add the category message to the #role-request channel
           interaction.guild.channels.resolve(roleSystem.roleRequestChannelId).send('Creating new category...')
@@ -184,7 +184,7 @@ module.exports = {
         const newName = interaction.options.getString('new-name');
 
         try {
-          await interaction.deferReply({ ephemeral: true });
+          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
           // Find a matching role category
           let sql = `SELECT rc.id, rc.messageId
@@ -231,12 +231,12 @@ module.exports = {
         if (!roleCategory) {
           return interaction.reply({
             content: 'That category does not exist!',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
         try {
-          await interaction.deferReply({ ephemeral: true });
+          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
           const roles = await dbQueryAll('SELECT roleId FROM roles WHERE categoryId=?', [roleCategory.id]);
           for (const roleObj of roles) {
@@ -281,15 +281,15 @@ module.exports = {
           if (!roleCategory) {
             return interaction.reply({
               content: 'That category does not exist!',
-              ephemeral: true,
+              flags: MessageFlags.Ephemeral,
             });
           }
 
-          await interaction.deferReply({ ephemeral: true });
+          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
           await updateCategoryMessage(interaction.client, interaction.guild, roleCategory.messageId);
           await interaction.followUp({
             content: `Category ${categoryName} has been refreshed.`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         } catch (e) {
           console.error(e);
@@ -338,19 +338,19 @@ module.exports = {
         if (row) {
           return await interaction.reply({
             content: 'That role already exists!',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
         try {
-          await interaction.deferReply({ ephemeral: true });
+          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
           // Verify the requested emoji is available on this server
           const emoji = await parseEmoji(interaction.guild, reaction, true);
           if (!emoji) {
             return interaction.followUp({
               content: 'That emoji is not available on this server!',
-              ephemeral: true,
+              flags: MessageFlags.Ephemeral,
             });
           }
 
@@ -378,7 +378,7 @@ module.exports = {
           if (roleCount.count >= 12) {
             return interaction.followUp({
               content: 'A role category may not exceed twelve (12) roles.',
-              ephemeral: true,
+              flags: MessageFlags.Ephemeral,
             });
           }
 
@@ -437,12 +437,12 @@ module.exports = {
         if (!roleData) {
           return interaction.reply({
             content: 'That role does not exist in the specified guild/category!',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
         try {
-          await interaction.deferReply({ ephemeral: true });
+          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
           // Update role name in the database
           await dbExecute('UPDATE roles SET roleName=? WHERE id=?', [newName, roleData.id]);
@@ -498,12 +498,12 @@ module.exports = {
         if (!roleData) {
           return interaction.reply({
             content: 'That role does not exist!',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
         try {
-          await interaction.deferReply({ ephemeral: true });
+          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
           // Verify the requested emoji is available on this server
           const emoji = await parseEmoji(interaction.guild, reaction, true);
@@ -516,7 +516,7 @@ module.exports = {
           await updateCategoryMessage(interaction.client, interaction.guild, roleData.messageId);
           return interaction.followUp({
             content: `Role \`${role.name}\` reaction updated to ${reaction} in category \`${categoryName}\`.`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         } catch (e) {
           console.error(e);
@@ -559,12 +559,12 @@ module.exports = {
         if (!roleData) {
           return interaction.reply({
             content: 'That role does not exist in this guild/category!',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
         try {
-          await interaction.deferReply({ ephemeral: true });
+          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
           await dbExecute('UPDATE roles SET description=? WHERE id=?', [description, roleData.id]);
           await updateCategoryMessage(interaction.client, interaction.guild, roleData.messageId);
           return interaction.followUp(`Updated description for role ${role.name} in category ${categoryName}.`);
@@ -604,12 +604,12 @@ module.exports = {
         if (!roleData) {
           return interaction.reply({
             content: 'That role does not exist in this guild/category!',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
         try {
-          await interaction.deferReply({ ephemeral: true });
+          await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
           // Remove the role from the guild
           await interaction.guild.roles.resolve(roleData.roleId).delete();

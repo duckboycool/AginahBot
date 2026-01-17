@@ -20,7 +20,7 @@ module.exports = {
         if (!interaction.channel.isTextBased() || interaction.channel.isVoiceBased()) {
           return interaction.reply({
             content: 'The channel must be a text channel.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -35,7 +35,7 @@ module.exports = {
         if (!await managesThread(guildData.id, interaction)) {
           return interaction.reply({
             content: 'You are not able to give permissions in this channel.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -47,12 +47,12 @@ module.exports = {
           if (err.code === 'ER_DUP_ENTRY') {
             return interaction.reply({
               content: 'Specified user already has permissions.',
-              ephemeral: true,
+              flags: MessageFlags.Ephemeral,
             });
           } else {
             return interaction.reply({
               content: 'Error adding permissions.',
-              ephemeral: true,
+              flags: MessageFlags.Ephemeral,
             });
           }
         }
@@ -71,7 +71,7 @@ module.exports = {
         await interaction.channel.send(grantMessage);
         return interaction.reply({
           content: 'Permission granted.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       },
     },
@@ -102,7 +102,7 @@ module.exports = {
 
         return interaction.reply({
           content: 'Permission revoked.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       },
     },
@@ -121,7 +121,7 @@ module.exports = {
         if (!permissions.has(PermissionsBitField.Flags.ManageMessages)) {
           return interaction.reply({
             content: 'Required permissions are missing for this command. (Manage Messages)',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -142,7 +142,7 @@ module.exports = {
         if (!await managesThread(guildData.id, interaction)) {
           return interaction.reply({
             content: 'You do not have permission to pin messages in this channel.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -152,19 +152,19 @@ module.exports = {
             await message.pin();
             return interaction.reply({
               content: 'Message pinned.',
-              ephemeral: true,
+              flags: MessageFlags.Ephemeral,
             });
           }
 
           return interaction.reply({
             content: 'That message is already pinned.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         } catch (err) {
           if (err.status && err.status === 404) {
             return interaction.reply({
               content: 'No message with that ID could be found.',
-              ephemeral: true,
+              flags: MessageFlags.Ephemeral,
             });
           }
 
@@ -187,7 +187,7 @@ module.exports = {
         if (!permissions.has(PermissionsBitField.Flags.ManageMessages)) {
           return interaction.reply({
             content: 'Required permissions are missing for this command. (Manage Messages)',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -208,7 +208,7 @@ module.exports = {
         if (!await managesThread(guildData.id, interaction)) {
           return interaction.reply({
             content: 'You do not have permission to unpin messages in this channel.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -218,19 +218,19 @@ module.exports = {
             await message.unpin();
             return interaction.reply({
               content: 'Message unpinned.',
-              ephemeral: true,
+              flags: MessageFlags.Ephemeral,
             });
           }
 
           return interaction.reply({
             content: 'That message is not pinned.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         } catch (err) {
           if (err.status && err.status === 404) {
             return interaction.reply({
               content: 'No message with that ID could be found.',
-              ephemeral: true,
+              flags: MessageFlags.Ephemeral,
             });
           }
 
@@ -272,7 +272,7 @@ module.exports = {
         if (results.length === 0) {
           return interaction.reply({
             content: `No users have thread permissions${channel ? ' in that channel.' : '.'}`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -281,7 +281,7 @@ module.exports = {
           content += `<@${row.userId}> has thread permissions in <#${row.channelId}>.\n`;
         }
 
-        return interaction.reply({ content, ephemeral: true });
+        return interaction.reply({ content, flags: MessageFlags.Ephemeral });
       },
     },
     {
@@ -307,14 +307,14 @@ module.exports = {
         if (!await managesThread(guildData.id, interaction)) {
           return interaction.reply({
             content: 'You do not have permission to edit tags in this channel.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
         if (!interaction.channel.parent?.isThreadOnly()) {
           return interaction.reply({
             content: 'Cannot add tags outside of a forum thread.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -326,7 +326,7 @@ module.exports = {
         if (!tag) {
           return interaction.reply({
             content: `Tag \`${tagName}\` is invalid.`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -334,7 +334,7 @@ module.exports = {
         if (channelTags.includes(tag.id)) {
           return interaction.reply({
             content: `Tag \`${tag.name}\` already on post.`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -343,7 +343,7 @@ module.exports = {
 
         return interaction.reply({
           content: 'Added tag.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       },
       async autocomplete(interaction) {
@@ -383,14 +383,14 @@ module.exports = {
         if (!await managesThread(guildData.id, interaction)) {
           return interaction.reply({
             content: 'You do not have permission to edit tags in this channel.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
         if (!interaction.channel.parent?.isThreadOnly()) {
           return interaction.reply({
             content: 'Cannot remove tags outside of a forum thread.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -402,7 +402,7 @@ module.exports = {
         if (!tag) {
           return interaction.reply({
             content: `Tag \`${tagName}\` is invalid.`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -410,7 +410,7 @@ module.exports = {
         if (!channelTags.includes(tag.id)) {
           return interaction.reply({
             content: `Tag \`${tag.name}\` not on post.`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -418,7 +418,7 @@ module.exports = {
 
         return interaction.reply({
           content: 'Removed tag.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       },
       async autocomplete(interaction) {
@@ -457,14 +457,14 @@ module.exports = {
         if (!await managesThread(guildData.id, interaction)) {
           return interaction.reply({
             content: 'You do not have permission to edit the title in this channel.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
         if (!interaction.channel.isThread()) {
           return interaction.reply({
             content: 'Cannot change title outside of a thread.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
           });
         }
 
@@ -473,7 +473,7 @@ module.exports = {
 
         return interaction.reply({
           content: 'Changed title.',
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral,
         });
       },
     },
