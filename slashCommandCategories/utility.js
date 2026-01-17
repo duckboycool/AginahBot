@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, MessageFlags, PermissionFlagsBits } = require('discord.js');
 const tmp = require('tmp');
 const fs = require('fs');
-const {dbExecute} = require('../lib');
+const { dbExecute } = require('../lib');
 
 module.exports = {
   category: 'Utility Commands',
@@ -31,7 +31,7 @@ module.exports = {
           });
         }
 
-        try{
+        try {
           // This might take a few seconds
           await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -59,7 +59,7 @@ module.exports = {
             lastMessageId = logs[logs.length - 1].id;
 
             // If no more messages are available, stop fetching
-            if (messages.size <= fetchLimit) { break; }
+            if (messages.size < fetchLimit) { break; }
           }
 
           // Reverse the array so the oldest messages occur first, and will therefore be printed earlier
@@ -75,6 +75,8 @@ module.exports = {
           // Save the output to a temporary file and send it to the channel
           return tmp.file((err, tmpFilePath, fd, cleanupCallback) => {
             fs.writeFile(tmpFilePath, output, () => {
+              // The followUp here seems to sometimes give an 'Unknown Message' error on the interaction
+              // response itself, particularly when it takes longer. Not really sure why.
               return interaction.followUp({
                 content: `Saved a log of the previous ${limit} messages in this channel.`,
                 files: [
