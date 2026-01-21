@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, InteractionContextType, MessageFlags, PermissionFlagsBits } = require('discord.js');
 const tmp = require('tmp');
 const fs = require('fs');
-const { dbExecute, replyError } = require('../lib');
+const { dbExecute, replyError, verifyModeratorRole } = require('../lib');
 
 module.exports = {
   category: 'Utility Commands',
@@ -153,7 +153,9 @@ module.exports = {
           // Remove thread members who have not sent a message in specified time
           console.info('Purging inactive members...');
           for (let member of threadMembers) {
-            if (!activeUsers.has(member.id)) {
+            const isMod = await verifyModeratorRole(member.guildMember);
+
+            if (!(activeUsers.has(member.id) || isMod || member.user.bot)) {
               console.info(`Removing ${member.user.username}`);
               totalPurgedMembers++;
               if (doPurge) {
