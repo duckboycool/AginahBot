@@ -1,6 +1,6 @@
 const { dbQueryOne, dbExecute, getModeratorRole } = require('../lib');
-const { ButtonBuilder, ButtonStyle, ChannelType, PermissionsBitField, ActionRowBuilder,
-  SlashCommandBuilder, MessageFlags, PermissionFlagsBits, Guild, GuildMember, TextChannel } = require('discord.js');
+const { ButtonBuilder, ButtonStyle, ChannelType, PermissionsBitField, ActionRowBuilder, SlashCommandBuilder,
+  InteractionContextType, MessageFlags, PermissionFlagsBits, Guild, GuildMember, TextChannel } = require('discord.js');
 
 module.exports = {
   category: 'Mod Contact',
@@ -11,7 +11,7 @@ module.exports = {
       commandBuilder: new SlashCommandBuilder()
         .setName('mod-contact-enable')
         .setDescription('Enable the Mod Contact feature in this server.')
-        .setDMPermission(false)
+        .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(0),
       async execute(interaction) {
         // Fetch guild data
@@ -100,7 +100,7 @@ module.exports = {
       commandBuilder: new SlashCommandBuilder()
         .setName('mod-contact-disable')
         .setDescription('Remove the Mod Contact feature from this server.')
-        .setDMPermission(false)
+        .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(0),
       async execute(interaction) {
         // Fetch information about this guild's mod-contact feature
@@ -149,7 +149,7 @@ module.exports = {
           .setName('user')
           .setDescription('User to open a mod-contact with')
           .setRequired(true))
-        .setDMPermission(false)
+        .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
       async execute(interaction) {
         const user = interaction.options.getUser('user', true);
@@ -207,7 +207,7 @@ module.exports = {
       commandBuilder: new SlashCommandBuilder()
         .setName('mod-contact-resolve')
         .setDescription('Resolve a mod-contact channel.')
-        .setDMPermission(false)
+        .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
       async execute(interaction) {
         try {

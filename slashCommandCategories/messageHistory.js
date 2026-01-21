@@ -1,5 +1,5 @@
 const { dbQueryOne, dbExecute, getModeratorRole } = require('../lib');
-const { SlashCommandBuilder, ChannelType, MessageFlags, PermissionsBitField } = require('discord.js');
+const { SlashCommandBuilder, InteractionContextType, ChannelType, PermissionsBitField } = require('discord.js');
 
 module.exports = {
   category: 'Message History',
@@ -8,7 +8,7 @@ module.exports = {
       commandBuilder: new SlashCommandBuilder()
         .setName('message-history-enable')
         .setDescription('Create a channel to log edited and deleted messages.')
-        .setDMPermission(false)
+        .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(0),
       async execute(interaction) {
         let sql = `SELECT go.id, go.messageHistoryChannelId
@@ -19,11 +19,11 @@ module.exports = {
         if (options?.messageHistoryChannelId) {
           return interaction.reply({
             content: `Message history is already enabled for this guild in <#${options.messageHistoryChannelId}>.`,
-            flags: MessageFlags.Ephemeral,
+            ephemeral: true,
           });
         }
 
-        await interaction.deferReply({flags: MessageFlags.Ephemeral});
+        await interaction.deferReply({ephemeral: true});
         const moderatorRole = await getModeratorRole(interaction.guild);
         const messageHistoryChannel = await interaction.guild.channels.create({
           name: 'message-history',
@@ -54,7 +54,7 @@ module.exports = {
 
         return interaction.followUp({
           content: `${messageHistoryChannel} has been created.`,
-          flags: MessageFlags.Ephemeral,
+          ephemeral: true,
         });
       }
     },
@@ -62,7 +62,7 @@ module.exports = {
       commandBuilder: new SlashCommandBuilder()
         .setName('message-history-disable')
         .setDescription('Delete an existing message history channel.')
-        .setDMPermission(false)
+        .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(0),
       async execute(interaction) {
         let sql = `SELECT go.id, go.messageHistoryChannelId
@@ -73,11 +73,11 @@ module.exports = {
         if (!options?.messageHistoryChannelId) {
           return interaction.reply({
             content: 'Message history is not enabled for this guild.',
-            flags: MessageFlags.Ephemeral,
+            ephemeral: true,
           });
         }
 
-        await interaction.deferReply({flags: MessageFlags.Ephemeral});
+        await interaction.deferReply({ephemeral: true});
 
         // Delete the message history channel
         await interaction.guild.channels.delete(options.messageHistoryChannelId);
@@ -90,7 +90,7 @@ module.exports = {
 
         return interaction.followUp({
           content: 'Message history channel deleted.',
-          flags: MessageFlags.Ephemeral,
+          ephemeral: true,
         });
       }
     }

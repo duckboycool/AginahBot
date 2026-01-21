@@ -1,8 +1,8 @@
 const Discord = require('discord.js');
-const { SlashCommandBuilder, MessageFlags, PermissionFlagsBits, ButtonBuilder, ButtonStyle,
+const { SlashCommandBuilder, InteractionContextType, MessageFlags, PermissionFlagsBits, ButtonBuilder, ButtonStyle,
   ActionRowBuilder } = require('discord.js');
 const { generalErrorHandler } = require('../errorHandlers');
-const { dbQueryOne, dbQueryAll, dbExecute, updateScheduleBoard, verifyModeratorRole} = require('../lib');
+const { dbQueryOne, dbQueryAll, dbExecute, updateScheduleBoard, verifyModeratorRole } = require('../lib');
 const forbiddenWords = require('../assets/forbiddenWords.json');
 
 const isRolePingable = async (guildId, role) => {
@@ -138,7 +138,7 @@ module.exports = {
       commandBuilder: new SlashCommandBuilder()
         .setName('schedule-view')
         .setDescription('View upcoming events')
-        .setDMPermission(false),
+        .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
         // Check if the schedule boards feature is enabled
         let sql = `SELECT sb.channelId, sb.messageId
@@ -290,7 +290,7 @@ module.exports = {
           .setName('ping-role')
           .setDescription('Optional role to ping for this event')
           .setRequired(false))
-        .setDMPermission(false),
+        .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
         const title = interaction.options.getString('title');
         const pingRole = interaction.options.getRole('ping-role', false) ?? null;
@@ -372,7 +372,7 @@ module.exports = {
           .setName('ping-role')
           .setDescription('Optional role to ping for this event')
           .setRequired(false))
-        .setDMPermission(false),
+        .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
         const title = interaction.options.getString('title');
         const pingRole = interaction.options.getRole('ping-role', false) ?? null;
@@ -431,7 +431,7 @@ module.exports = {
           .setName('ping-role')
           .setDescription('Optional role to ping for this event')
           .setRequired(false))
-        .setDMPermission(false),
+        .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
         const title = interaction.options.getString('title');
         const pingRole = interaction.options.getRole('ping-role', false) ?? null;
@@ -490,7 +490,7 @@ module.exports = {
           .setName('minutes')
           .setDescription('Minutes to adjust the event')
           .setRequired(false))
-        .setDMPermission(false),
+        .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
         await interaction.deferReply();
 
@@ -597,7 +597,7 @@ module.exports = {
           .setName('event-code')
           .setDescription('Six character code of the upcoming event you wish to cancel.')
           .setRequired(true))
-        .setDMPermission(false),
+        .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
         const eventCode = interaction.options.getString('event-code');
 
@@ -676,7 +676,7 @@ module.exports = {
       commandBuilder: new SlashCommandBuilder()
         .setName('schedule-board-post')
         .setDescription('Post a schedule board in this channel.')
-        .setDMPermission(false)
+        .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
       async execute(interaction) {
         try {
@@ -728,7 +728,7 @@ module.exports = {
       commandBuilder: new SlashCommandBuilder()
         .setName('schedule-board-delete')
         .setDescription('Delete a schedule board if it exists in this channel.')
-        .setDMPermission(false)
+        .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
       async execute(interaction) {
         // Check for existing schedule board in this channel
@@ -769,7 +769,7 @@ module.exports = {
           .setName('toggle' )
           .setDescription('True to enable, False to disable')
           .setRequired(true))
-        .setDMPermission(false)
+        .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(0),
       async execute(interaction) {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
