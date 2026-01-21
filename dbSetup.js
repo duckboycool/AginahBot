@@ -117,6 +117,12 @@ const threadManagement = `CREATE TABLE IF NOT EXISTS thread_management (
     UNIQUE KEY guildChannelUser (guildDataId, channelId, userId)
 )`;
 
+// Effectively storing a set, maybe there's a better way to do this
+const alertedThreads = `CREATE TABLE IF NOT EXISTS alerted_threads (
+    id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    threadId VARCHAR(64) UNIQUE KEY NOT NULL
+)`;
+
 const scheduleBoards = `CREATE TABLE IF NOT EXISTS schedule_boards (
     id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     guildDataId BIGINT NOT NULL,
@@ -149,5 +155,6 @@ db.query(messageTags, handler);
 db.query(guildOptions, handler);
 db.query(pingableRoles, handler);
 db.query(threadManagement, handler);
+db.query(alertedThreads, handler);
 db.query(scheduleBoards, handler);
 db.end();

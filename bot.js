@@ -26,6 +26,7 @@ client.reactionListeners = [];
 client.interactionListeners = [];
 client.voiceStateListeners = [];
 client.roleDeletedListeners = [];
+client.threadMemberListeners = [];
 client.lastTagUse = new Map(); // For cooldown, doesn't really need to be persistently stored in DB
 
 // Load routines and run them once per hour
@@ -86,6 +87,12 @@ fs.readdirSync('./interactionListeners').filter((file) => file.endsWith('.js')).
 fs.readdirSync('./roleDeletedListeners').filter((file) => file.endsWith('.js')).forEach((listenerFile) => {
   const listener = require(`./roleDeletedListeners/${listenerFile}`);
   client.roleDeletedListeners.push(listener);
+});
+
+// Load Thread Member Join/Leave Listeners
+fs.readdirSync('./threadMemberListeners').filter((file) => file.endsWith('.js')).forEach((listenerFile) => {
+  const listener = require(`./threadMemberListeners/${listenerFile}`);
+  client.threadMemberListeners.push(listener);
 });
 
 // Run messages through the listeners
@@ -178,6 +185,10 @@ client.on(Events.InteractionCreate, async(interaction) => {
 
 client.on(Events.GuildRoleDelete, async(role) => {
   return client.roleDeletedListeners.forEach((listener) => listener(client, role));
+});
+
+client.on(Events.ThreadMembersUpdate, async(addedMembers, removedMembers) => {
+  return client.threadMemberListeners.forEach((listener) => listener(client, addedMembers, removedMembers));
 });
 
 // Handle the bot being added to a new guild
