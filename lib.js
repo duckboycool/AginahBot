@@ -5,14 +5,14 @@ const config = require('./config.json');
 const { generalErrorHandler } = require('./errorHandlers');
 
 module.exports = {
-  managesThread: async (guildId, interaction) => {
-    if (interaction.channel.ownerId === interaction.user.id) {
+  managesThread: async (guildId, channel, member) => {
+    if (channel.ownerId === member.id) {
       return true;
     }
 
     let sql = 'SELECT 1 FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?';
-    const permission = !!await module.exports.dbQueryOne(sql, [guildId, interaction.channelId, interaction.member.id]);
-    return permission || await module.exports.verifyModeratorRole(interaction.member);
+    const permission = !!await module.exports.dbQueryOne(sql, [guildId, channel.id, member.id]);
+    return permission || member.permissions.has(PermissionFlagsBits.ManageMessages);
   },
 
   // Function which returns a promise which will resolve to true or false

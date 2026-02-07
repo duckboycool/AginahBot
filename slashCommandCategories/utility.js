@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, InteractionContextType, MessageFlags, PermissionFlagsBits } = require('discord.js');
 const tmp = require('tmp');
 const fs = require('fs');
-const { dbExecute, replyError, verifyModeratorRole } = require('../lib');
+const { dbExecute, dbQueryOne, managesThread, replyError } = require('../lib');
 
 module.exports = {
   category: 'Utility Commands',
@@ -60,6 +60,9 @@ module.exports = {
 
             // If no more messages are available, stop fetching
             if (messages.size < fetchLimit) { break; }
+
+            // Delay to avoid ratelimit
+            await new Promise((resolve) => setTimeout(resolve, 600));
           }
 
           // Reverse the array so the oldest messages occur first, and will therefore be printed earlier
@@ -113,6 +116,14 @@ module.exports = {
         const days = interaction.options.getInteger('days') ?? 60;
         const doPurge = !interaction.options.getBoolean('dry-run');
 
+        const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
+        if (!guildData) {
+          return interaction.reply({
+            content: replyError('Unable to process request. No guild data exists for this guild. '),
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         if (days < 1) {
           return interaction.reply({
             content: 'Invalid activity cutoff.',
@@ -153,9 +164,9 @@ module.exports = {
           // Remove thread members who have not sent a message in specified time
           console.info('Purging inactive members...');
           for (let member of threadMembers) {
-            const isMod = await verifyModeratorRole(member.guildMember);
+            const hasPerms = await managesThread(guildData.id, interaction.channel, member.guildMember);
 
-            if (!(activeUsers.has(member.id) || isMod || member.user.bot)) {
+            if (!(activeUsers.has(member.id) || hasPerms || member.user.bot)) {
               console.info(`Removing ${member.user.username}`);
               totalPurgedMembers++;
               if (doPurge) {

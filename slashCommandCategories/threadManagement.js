@@ -32,7 +32,7 @@ module.exports = {
           });
         }
 
-        if (!await managesThread(guildData.id, interaction)) {
+        if (!await managesThread(guildData.id, interaction.channel, interaction.member)) {
           return interaction.reply({
             content: 'You are not able to give permissions in this channel.',
             flags: MessageFlags.Ephemeral,
@@ -139,7 +139,7 @@ module.exports = {
           });
         }
 
-        if (!await managesThread(guildData.id, interaction)) {
+        if (!await managesThread(guildData.id, interaction.channel, interaction.member)) {
           return interaction.reply({
             content: 'You do not have permission to pin messages in this channel.',
             flags: MessageFlags.Ephemeral,
@@ -205,7 +205,7 @@ module.exports = {
           });
         }
 
-        if (!await managesThread(guildData.id, interaction)) {
+        if (!await managesThread(guildData.id, interaction.channel, interaction.member)) {
           return interaction.reply({
             content: 'You do not have permission to unpin messages in this channel.',
             flags: MessageFlags.Ephemeral,
@@ -304,7 +304,7 @@ module.exports = {
           });
         }
 
-        if (!await managesThread(guildData.id, interaction)) {
+        if (!await managesThread(guildData.id, interaction.channel, interaction.member)) {
           return interaction.reply({
             content: 'You do not have permission to edit tags in this channel.',
             flags: MessageFlags.Ephemeral,
@@ -380,7 +380,7 @@ module.exports = {
           });
         }
 
-        if (!await managesThread(guildData.id, interaction)) {
+        if (!await managesThread(guildData.id, interaction.channel, interaction.member)) {
           return interaction.reply({
             content: 'You do not have permission to edit tags in this channel.',
             flags: MessageFlags.Ephemeral,
@@ -454,7 +454,7 @@ module.exports = {
           });
         }
 
-        if (!await managesThread(guildData.id, interaction)) {
+        if (!await managesThread(guildData.id, interaction.channel, interaction.member)) {
           return interaction.reply({
             content: 'You do not have permission to edit the title in this channel.',
             flags: MessageFlags.Ephemeral,
