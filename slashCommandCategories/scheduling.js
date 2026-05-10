@@ -2,7 +2,8 @@ const Discord = require('discord.js');
 const { SlashCommandBuilder, InteractionContextType, MessageFlags, PermissionFlagsBits, ButtonBuilder, ButtonStyle,
   ActionRowBuilder } = require('discord.js');
 const { generalErrorHandler } = require('../errorHandlers');
-const { dbQueryOne, dbQueryAll, dbExecute, updateScheduleBoard, verifyModeratorRole } = require('../lib');
+const { dbQueryOne, dbQueryAll, dbExecute, updateScheduleBoard, verifyModeratorRole, verifyChannelPermissions,
+  formatPermissionList } = require('../lib');
 const forbiddenWords = require('../assets/forbiddenWords.json');
 
 const isRolePingable = async (guildId, role) => {
@@ -47,6 +48,36 @@ const generateEventCode = () => {
   }
 
   return code;
+};
+
+const verifyScheduleNewPermissions = async (interaction, pingRole = null) => {
+  const requiredPermissions = [
+    PermissionFlagsBits.ViewChannel,
+    PermissionFlagsBits.SendMessages,
+    PermissionFlagsBits.EmbedLinks,
+  ];
+
+  if (pingRole) {
+    requiredPermissions.push(PermissionFlagsBits.MentionEveryone);
+  }
+
+  // If this is a guild text channel and the guild has thread creation enabled, additional permissions are needed
+  if (interaction.channel.type === Discord.ChannelType.GuildText) {
+    const sql = `SELECT 1
+                 FROM guild_options go
+                 JOIN guild_data gd ON go.guildDataId = gd.id
+                 WHERE gd.guildId=?
+                    AND go.eventThreads=1`;
+    const threadsEnabled = await dbQueryOne(sql, [interaction.guildId]);
+    if (threadsEnabled) {
+      requiredPermissions.push(
+          PermissionFlagsBits.CreatePublicThreads,
+          PermissionFlagsBits.SendMessagesInThreads,
+      );
+    }
+  }
+
+  return verifyChannelPermissions(interaction.channel, requiredPermissions);
 };
 
 const sendScheduleMessage = async (interaction, targetDate, title = null, pingRole = null, duration = null) => {
@@ -187,10 +218,7 @@ module.exports = {
         const events = await dbQueryAll(sql, [interaction.guildId, new Date().getTime()]);
 
         if (events.length === 0) {
-          return interaction.reply({
-            content: 'There are currently no events scheduled.',
-            flags: MessageFlags.Ephemeral,
-          });
+          return interaction.reply({ content: 'There are currently no events scheduled.', flags: MessageFlags.Ephemeral });
         }
 
         try{
@@ -306,6 +334,15 @@ module.exports = {
           });
         }
 
+        const scheduleNewPermissions = await verifyScheduleNewPermissions(interaction, pingRole);
+        if (!scheduleNewPermissions.ok) {
+          return interaction.reply({
+            content: `Required permissions are missing for this command. (` +
+              `${formatPermissionList(scheduleNewPermissions.missingPermissions)})`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         if (!(new RegExp(/\d{4}-\d{2}-\d{2}/).test(dateString))) {
           return interaction.reply({
             content: 'Invalid date format provided. Must be of format: YYYY-MM-DD.',
@@ -386,6 +423,15 @@ module.exports = {
           });
         }
 
+        const scheduleNewTSPermissions = await verifyScheduleNewPermissions(interaction, pingRole);
+        if (!scheduleNewTSPermissions.ok) {
+          return interaction.reply({
+            content: `Required permissions are missing for this command. (` +
+              `${formatPermissionList(scheduleNewTSPermissions.missingPermissions)})`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         try{
           const currentDate = new Date();
           const targetDate = new Date(timestamp);
@@ -442,6 +488,15 @@ module.exports = {
         if (pingRole && !await isRolePingable(interaction.guild.id, pingRole)) {
           return interaction.reply({
             content: 'Permission to ping that role has not been granted.',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        const scheduleNewRelativePermissions = await verifyScheduleNewPermissions(interaction, pingRole);
+        if (!scheduleNewRelativePermissions.ok) {
+          return interaction.reply({
+            content: `Required permissions are missing for this command. (` +
+              `${formatPermissionList(scheduleNewRelativePermissions.missingPermissions)})`,
             flags: MessageFlags.Ephemeral,
           });
         }
@@ -619,6 +674,27 @@ module.exports = {
           });
         }
 
+        const scheduleChannel = await interaction.guild.channels.fetch(eventData.channelId);
+        if (!scheduleChannel) {
+          return interaction.reply({
+            content: 'Unable to locate scheduling channel for specified event.',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        const scheduleCancelPermissions = verifyChannelPermissions(scheduleChannel, [
+          PermissionFlagsBits.ViewChannel,
+          PermissionFlagsBits.ReadMessageHistory,
+          PermissionFlagsBits.ManageMessages,
+        ]);
+        if (!scheduleCancelPermissions.ok) {
+          return interaction.reply({
+            content: `Required permissions are missing for this command. (` +
+              `${formatPermissionList(scheduleCancelPermissions.missingPermissions)})`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         try {
           // This potentially causes several requests to be made, and may take a few seconds
           await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -635,7 +711,6 @@ module.exports = {
 
           try{
             // The event is to be cancelled. Replace the schedule message with a cancellation notice
-            const scheduleChannel = await interaction.guild.channels.fetch(eventData.channelId);
             const scheduleMsg = await scheduleChannel.messages.fetch(eventData.messageId);
             await scheduleMsg.edit({
               content: `This event has been cancelled by ${interaction.user}.`,
@@ -679,6 +754,21 @@ module.exports = {
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
       async execute(interaction) {
+        const scheduleBoardPostPermissions = verifyChannelPermissions(interaction.channel, [
+          PermissionFlagsBits.ViewChannel,
+          PermissionFlagsBits.ReadMessageHistory,
+          PermissionFlagsBits.SendMessages,
+          PermissionFlagsBits.EmbedLinks,
+          PermissionFlagsBits.ManageMessages,
+        ]);
+        if (!scheduleBoardPostPermissions.ok) {
+          return interaction.reply({
+            content: `Required permissions are missing for this command. (` +
+              `${formatPermissionList(scheduleBoardPostPermissions.missingPermissions)})`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         try {
           // This function may make a few requests, which could take a few seconds
           await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -692,7 +782,17 @@ module.exports = {
           const existingBoard = await dbQueryOne(sql, [interaction.guildId, interaction.channel.id]);
           if (existingBoard) {
             // Fetch message object for existing schedule board
-            const existingMessage = await interaction.channel.messages.fetch(existingBoard.messageId);
+            let existingMessage = null;
+            try {
+              existingMessage = await interaction.channel.messages.fetch(existingBoard.messageId);
+            } catch (err) {
+              if (err.status !== 404) {
+                // Issues caused by permissions or other non-message-already-deleted errors should not
+                // delete database rows
+                throw err;
+              }
+            }
+
             // Schedule board already exists, and message is present in channel
             if (existingMessage) {
               return interaction.followUp({
@@ -702,7 +802,7 @@ module.exports = {
             }
 
             // Message object has been deleted. Remove its entry from schedule_boards
-            await dbExecute('DELETE FROM schedule_boards WHERE id=?', [existingMessage.id]);
+            await dbExecute('DELETE FROM schedule_boards WHERE id=?', [existingBoard.id]);
             await interaction.followUp({
               content: 'It appears a schedule board previously existed in this channel but was deleted without ' +
                 'my knowledge (I blame Discord). A new schedule board is being created.',
@@ -731,6 +831,19 @@ module.exports = {
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
       async execute(interaction) {
+        const scheduleBoardDeletePermissions = verifyChannelPermissions(interaction.channel, [
+          PermissionFlagsBits.ViewChannel,
+          PermissionFlagsBits.ReadMessageHistory,
+          PermissionFlagsBits.ManageMessages,
+        ]);
+        if (!scheduleBoardDeletePermissions.ok) {
+          return interaction.reply({
+            content: `Required permissions are missing for this command. (` +
+              `${formatPermissionList(scheduleBoardDeletePermissions.missingPermissions)})`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         // Check for existing schedule board in this channel
         let sql = `SELECT sb.id, sb.messageId
                    FROM schedule_boards sb

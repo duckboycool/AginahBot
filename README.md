@@ -32,6 +32,11 @@ Example config:
   "dbUser": "database-username",
   "dbPass": "database-password",
   "dbName": "database-name",
+  "dbConnectionLimit": 10,
+  "dbRetryMaxAttempts": 3,
+  "dbRetryBaseDelay": 250,
+  "dbRetryMaxDelay": 4000,
+  "dbRetryJitter": 150,
   "moderatorRole": "Moderator"
 }
 ```

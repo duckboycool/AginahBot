@@ -54,7 +54,6 @@ module.exports = async (client, interaction) => {
                 .setStyle(ButtonStyle.Danger)
             ]),
         ],
-        flags: MessageFlags.Ephemeral,
       });
 
     default:

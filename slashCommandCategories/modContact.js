@@ -347,4 +347,3 @@ module.exports = {
     return channel;
   },
 };
-

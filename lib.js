@@ -4,6 +4,152 @@ const mysql = require('mysql2');
 const config = require('./config.json');
 const { generalErrorHandler } = require('./errorHandlers');
 
+const dbConnectionPool = mysql.createPool({
+  host: config.dbHost,
+  user: config.dbUser,
+  password: config.dbPass,
+  database: config.dbName,
+  supportBigNumbers: true,
+  bigNumberStrings: true,
+  waitForConnections: true,
+  connectionLimit: config.dbConnectionLimit,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0,
+});
+
+const DB_RETRY_MAX_ATTEMPTS = config.dbRetryMaxAttempts;
+const DB_RETRY_BASE_DELAY = config.dbRetryBaseDelay;
+const DB_RETRY_MAX_DELAY = config.dbRetryMaxDelay;
+const DB_RETRY_JITTER = config.dbRetryJitter;
+
+const retryableDbErrorCodes = new Set([
+  'PROTOCOL_CONNECTION_LOST', 'PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR', 'PROTOCOL_ENQUEUE_HANDSHAKE_TWICE',
+  'ER_CON_COUNT_ERROR', 'ER_LOCK_WAIT_TIMEOUT', 'ER_LOCK_DEADLOCK', 'ER_QUERY_TIMEOUT', 'ECONNRESET', 'ECONNREFUSED',
+  'ETIMEDOUT', 'EPIPE',
+]);
+
+const permissionFlagNames = new Map(
+  Object.entries(PermissionFlagsBits).map(([name, value]) => [value.toString(), name])
+);
+
+const normalizePermissionFlag = (permission) => {
+  if (typeof permission === 'bigint') { return permission; }
+  if (typeof permission === 'number') { return BigInt(permission); }
+
+  if (
+    typeof permission === 'string' &&
+    Object.prototype.hasOwnProperty.call(PermissionFlagsBits, permission)
+  ) {
+    return PermissionFlagsBits[permission];
+  }
+
+  return null;
+};
+
+const makeReadablePermissionFlagName = (permissionName) => permissionName.replace(/([a-z])([A-Z])/g, '$1 $2');
+
+const getPermissionDisplayName = (permission) => {
+  if (
+    typeof permission === 'string' &&
+    Object.prototype.hasOwnProperty.call(PermissionFlagsBits, permission)
+  ) {
+    return makeReadablePermissionFlagName(permission);
+  }
+
+  const normalizedPermission = normalizePermissionFlag(permission);
+  if (normalizedPermission === null) {
+    return String(permission);
+  }
+
+  const permissionName = permissionFlagNames.get(normalizedPermission.toString());
+  if (!permissionName) {
+    return normalizedPermission.toString();
+  }
+
+  return makeReadablePermissionFlagName(permissionName);
+};
+
+const formatLogField = (value) => {
+  let strValue = value;
+
+  if (typeof value !== 'string') {
+    try {
+      strValue = JSON.stringify(value);
+    } catch (err) {
+      strValue = '[unserializable]';
+    }
+  }
+
+  if (!strValue) { return ''; }
+  return strValue.replace(/\s+/g, ' ').trim();
+};
+
+const logDbError = (operation, sql, args, err, retryContext = null) => {
+  const dbError = (err && typeof err === 'object') ? err : { message: String(err) };
+
+  console.error(`[mysql] ${operation} failed`, {
+    message: dbError.message || null,
+    code: dbError.code || null,
+    errno: dbError.errno || null,
+    sqlState: dbError.sqlState || null,
+    fatal: !!dbError.fatal,
+    syscall: dbError.syscall || null,
+    sql: formatLogField(sql),
+    args: formatLogField(args),
+    retryContext,
+  });
+};
+
+const isRetryableDbError = (err) => {
+  if (!err || typeof err !== 'object') { return false; }
+  if (typeof err.code === 'string' && retryableDbErrorCodes.has(err.code)) { return true; }
+  return typeof err.sqlState === 'string' && err.sqlState.startsWith('08');
+};
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const getRetryDelayMs = (attempt) => {
+  const exponentialDelay = Math.min(DB_RETRY_MAX_DELAY, DB_RETRY_BASE_DELAY * (2 ** (attempt - 1)));
+  const jitter = DB_RETRY_JITTER > 0
+    ? Math.floor(Math.random() * (DB_RETRY_JITTER + 1))
+    : 0;
+  return exponentialDelay + jitter;
+};
+
+const getBotGuildMember = (guild, client = null) => (
+  guild?.members?.me || (client?.user ? guild.members.resolve(client.user.id) : null)
+);
+
+const executeWithDbRetry = async (operation, sql, args, execute) => {
+  for (let attempt = 1; attempt <= DB_RETRY_MAX_ATTEMPTS; attempt++) {
+    try {
+      return await execute();
+    } catch (err) {
+      const willRetry = isRetryableDbError(err) && attempt < DB_RETRY_MAX_ATTEMPTS;
+      const delayMs = willRetry ? getRetryDelayMs(attempt) : 0;
+
+      logDbError(operation, sql, args, err, {
+        attempt,
+        maxAttempts: DB_RETRY_MAX_ATTEMPTS,
+        willRetry,
+        delayMs,
+      });
+
+      if (!willRetry) { throw err; }
+      await sleep(delayMs);
+    }
+  }
+
+  throw new Error('[mysql] Retry loop ended unexpectedly');
+};
+
+dbConnectionPool.on('connection', (connection) => {
+  connection.on('error', (err) => {
+    logDbError('connection', 'Unable to connect to database', [], err);
+  });
+});
+
 module.exports = {
   managesThread: async (guildId, channel, member) => {
     if (channel.ownerId === member.id) {
@@ -26,6 +172,52 @@ module.exports = {
     if (!guildMember) { return false; }
     return guildMember.permissions.has(PermissionFlagsBits.Administrator);
   },
+
+  /**
+   * Verify bot permissions in a specific channel before any operation is attempted.
+   * @param channel
+   * @param requiredPermissions
+   * @returns {{ok: boolean, missingPermissions: string[]}}
+   */
+  verifyChannelPermissions: (channel, requiredPermissions = []) => {
+    if (!channel?.guild) {
+      return {
+        ok: false,
+        missingPermissions: requiredPermissions.map((permission) => getPermissionDisplayName(permission)),
+      };
+    }
+
+    const botMember = channel.guild.members.me || channel.guild.members.resolve(channel.client.user.id);
+    if (!botMember) {
+      return {
+        ok: false,
+        missingPermissions: requiredPermissions.map((permission) => getPermissionDisplayName(permission)),
+      };
+    }
+
+    const channelPermissions = channel.permissionsFor(botMember);
+    if (!channelPermissions) {
+      return {
+        ok: false,
+        missingPermissions: requiredPermissions.map((permission) => getPermissionDisplayName(permission)),
+      };
+    }
+
+    const missingPermissions = [];
+    for (const permission of requiredPermissions) {
+      const normalizedPermission = normalizePermissionFlag(permission);
+      if (normalizedPermission === null || !channelPermissions.has(normalizedPermission)) {
+        missingPermissions.push(getPermissionDisplayName(permission));
+      }
+    }
+
+    return {
+      ok: missingPermissions.length === 0,
+      missingPermissions,
+    };
+  },
+
+  formatPermissionList: (permissions = []) => permissions.join(', '),
 
   getModeratorRole: (guild) => new Promise(async (resolve) => {
     let modRole = null;
@@ -74,13 +266,24 @@ module.exports = {
     // Find this guild's moderator role id
     let moderatorRole = await module.exports.getModeratorRole(guild);
     if (!moderatorRole) {
+      const botMember = getBotGuildMember(guild, client);
+      const canManageRoles = !!botMember?.permissions?.has(PermissionFlagsBits.ManageRoles);
+      if (!canManageRoles) {
+        console.warn(`Unable to initialize guild setup for guild ${guild.id}: missing Manage Roles ` +
+          `permission to create required role "${config.moderatorRole}".`);
+        return;
+      }
+
       return guild.roles.create({
         name: config.moderatorRole,
         reason: `AginahBot requires a ${config.moderatorRole} role.`
       }).then(async (moderatorRole) => {
         let sql = 'INSERT INTO guild_data (guildId, moderatorRoleId) VALUES (?, ?)';
         await module.exports.dbExecute(sql, [guild.id, moderatorRole.id]);
-      }).catch((err) => generalErrorHandler(err));
+      }).catch((err) => {
+        console.warn(`Unable to create moderator role for guild ${guild.id} while initializing setup.`);
+        generalErrorHandler(err);
+      });
     }
 
     // Create guild data
@@ -129,10 +332,24 @@ module.exports = {
   },
 
   verifyGuildSetups: async (client) => {
-    client.guilds.cache.each(async (guild) => {
+    for (const guild of client.guilds.cache.values()) {
       // Ensure guild_data exists
-      const guildData = await module.exports.dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [guild.id]);
-      if (!guildData) { await module.exports.handleGuildCreate(client, guild); }
+      let guildData = await module.exports.dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [guild.id]);
+      if (!guildData) {
+        await module.exports.handleGuildCreate(client, guild);
+        guildData = await module.exports.dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [guild.id]);
+      }
+
+      if (!guildData) {
+        const botMember = getBotGuildMember(guild, client);
+        const canManageRoles = !!botMember?.permissions?.has(PermissionFlagsBits.ManageRoles);
+        const discoveredModeratorRole = await module.exports.discoverModeratorRole(guild);
+
+        console.warn(`Unable to verify guild setup for guild ${guild.id}. No guild_data entry found after ` +
+          `setup attempt. Diagnostics: botMemberResolved=${!!botMember}, canManageRoles=${canManageRoles}, ` +
+          `moderatorRoleFoundByName=${!!discoveredModeratorRole}.`);
+        continue;
+      }
 
       // Ensure guild_options exists
       const guildOptions = await module.exports.dbQueryOne(
@@ -142,7 +359,7 @@ module.exports = {
       if (!guildOptions) {
         await module.exports.dbExecute('INSERT INTO guild_options (guildDataId) VALUES (?)', [guildData.id]);
       }
-    });
+    }
   },
 
   /**
@@ -171,42 +388,27 @@ module.exports = {
       .catch((error) => reject(error));
   }),
 
-  dbConnect: () => mysql.createConnection({
-    host: config.dbHost,
-    user: config.dbUser,
-    password: config.dbPass,
-    database: config.dbName,
-    supportBigNumbers: true,
-    bigNumberStrings: true,
-  }),
-
-  dbQueryOne: (sql, args = []) => new Promise((resolve, reject) => {
-    const conn = module.exports.dbConnect();
-    conn.query(sql, args, (err, result) => {
+  dbQueryOne: (sql, args = []) => executeWithDbRetry('queryOne', sql, args, () => new Promise((resolve, reject) => {
+    dbConnectionPool.query(sql, args, (err, result) => {
       if (err) { reject(err); }
-      else if (result.length > 1) { reject('More than one row returned'); }
+      else if (result.length > 1) { reject(new Error('More than one row returned')); }
       else { resolve(result.length === 1 ? result[0] : null); }
-      return conn.end();
     });
-  }),
+  })),
 
-  dbQueryAll: (sql, args = []) => new Promise((resolve, reject) => {
-    const conn = module.exports.dbConnect();
-    conn.query(sql, args, (err, result) => {
+  dbQueryAll: (sql, args = []) => executeWithDbRetry('queryAll', sql, args, () => new Promise((resolve, reject) => {
+    dbConnectionPool.query(sql, args, (err, result) => {
       if (err) { reject(err); }
       else { resolve(result); }
-      return conn.end();
     });
-  }),
+  })),
 
-  dbExecute: (sql, args = []) => new Promise((resolve, reject) => {
-    const conn = module.exports.dbConnect();
-    conn.execute(sql, args, (err) => {
+  dbExecute: (sql, args = []) => executeWithDbRetry('execute', sql, args, () => new Promise((resolve, reject) => {
+    dbConnectionPool.execute(sql, args, (err) => {
       if (err) { reject(err); }
       else { resolve(); }
-      return conn.end();
     });
-  }),
+  })),
 
   parseArgs: (command) => {
     // Quotes with which arguments can be wrapped
@@ -285,6 +487,19 @@ module.exports = {
       const boardChannel = await guild.channels.fetch(board.channelId);
       if (!boardChannel) {
         await module.exports.dbExecute('DELETE FROM schedule_boards WHERE id=?', [board.id]);
+        continue;
+      }
+
+      const boardPermissionCheck = module.exports.verifyChannelPermissions(boardChannel, [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.EmbedLinks,
+      ]);
+      if (!boardPermissionCheck.ok) {
+        console.warn(`Skipping schedule board ${board.id} in guild ${guild.id}: missing permissions in ` +
+          `#${boardChannel.name} (${boardChannel.id}): ` +
+          `${module.exports.formatPermissionList(boardPermissionCheck.missingPermissions)}.`);
         continue;
       }
 
@@ -443,6 +658,19 @@ module.exports = {
 
       // Ensure boardChannel is non-null
       if (boardChannel === null) {
+        continue;
+      }
+
+      const boardPermissionCheck = module.exports.verifyChannelPermissions(boardChannel, [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.ReadMessageHistory,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.EmbedLinks,
+      ]);
+      if (!boardPermissionCheck.ok) {
+        console.warn(`Skipping schedule board ${board.id} in guild ${guild.id}: missing permissions in ` +
+          `#${boardChannel.name} (${boardChannel.id}): ` +
+          `${module.exports.formatPermissionList(boardPermissionCheck.missingPermissions)}.`);
         continue;
       }
 
