@@ -1,4 +1,4 @@
-const { dbQueryOne} = require('../lib');
+const { dbQueryOne, cachePartial} = require('../lib');
 const tmp = require('tmp');
 const fs = require('fs');
 const Discord = require('discord.js');
@@ -17,6 +17,13 @@ module.exports = async (client, message) => {
     return;
   }
 
+  try {
+    message = await cachePartial(message);
+  } catch (err) {
+    if (err.code === 10008) { return; }
+    throw err;
+  }
+
   const messageHistoryChannel = await message.guild.channels.fetch(options.messageHistoryChannelId);
   const embed = new Discord.EmbedBuilder()
     .setTitle('Message Deleted')
@@ -33,7 +40,7 @@ module.exports = async (client, message) => {
         inline: true,
       },
       { name: ' ', value: ' ', inline: true },
-      { name: 'Author ID', value: message.member.id, inline: true },
+      { name: 'Author ID', value: message.member?.id || message.author.id, inline: true },
     );
 
   const files = [];
