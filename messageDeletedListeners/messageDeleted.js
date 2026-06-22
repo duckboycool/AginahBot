@@ -57,6 +57,16 @@ module.exports = async (client, message) => {
     embed.addFields([
       { name: 'Message Content', value: 'Content exceeded 1024 characters. See attached text log.', inline: false, },
     ]);
+  } else if (message.reference?.type === Discord.MessageReferenceType.Forward) {
+    const ref = message.reference;
+    
+    embed.addFields([
+      {
+        name: 'Message Content',
+        value: `Message was forwarded from this message: ${Discord.messageLink(ref.channelId, ref.messageId, ref.guildId)}`,
+        inline: false,
+      }
+    ]);
   } else {
     embed.addFields([
       {
