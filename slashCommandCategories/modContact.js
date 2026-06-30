@@ -1,4 +1,4 @@
-const { dbQueryOne, dbExecute, getModeratorRole } = require('../lib');
+const { dbQueryOne, dbExecute, getModeratorRole, replyError } = require('../lib');
 const { ButtonBuilder, ButtonStyle, ChannelType, PermissionsBitField, ActionRowBuilder, SlashCommandBuilder,
   InteractionContextType, MessageFlags, PermissionFlagsBits, Guild, GuildMember, TextChannel } = require('discord.js');
 
@@ -87,7 +87,6 @@ module.exports = {
           await dbExecute(sql, [ guildData.id, category.id, channel.id, contactMessage.id ]);
           return interaction.followUp('Mod contact feature enabled on this server.');
         } catch (e) {
-          console.error(e);
           return interaction.followUp(
             replyError('Something went wrong and the Mod Contact feature could not be enabled on this server.\n')
           );
@@ -133,7 +132,6 @@ module.exports = {
           await dbExecute('DELETE FROM mod_contact WHERE id=?', [ modContact.id ]);
           return interaction.followUp('Mod contact feature disabled on this server.');
         } catch (e) {
-          console.error(e);
           return interaction.followUp(
             replyError('Something went wrong and the Mod Contact feature could not be enabled on this server.\n')
           );
@@ -195,7 +193,6 @@ module.exports = {
           });
 
         } catch (e) {
-          console.error(e);
           return interaction.followUp(
             replyError('Something went wrong and the Mod Contact feature could not be enabled on this server.\n')
           );
@@ -240,7 +237,6 @@ module.exports = {
 
           return interaction.channel.delete();
         } catch (e) {
-          console.error(e);
           return interaction.followUp(
             replyError('Something went wrong and the Mod Contact feature could not be enabled on this server.\n')
           );

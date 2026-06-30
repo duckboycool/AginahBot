@@ -97,7 +97,6 @@ module.exports = {
             });
           });
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the channel logs could not be saved.\n'));
         }
       }
@@ -180,7 +179,6 @@ module.exports = {
             }
           }
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the thread could not be purged.\n'));
         }
 

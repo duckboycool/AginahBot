@@ -53,7 +53,6 @@ module.exports = {
           await dbExecute(sql, [guildData.id, category.id, voiceChannel.id]);
           return interaction.followUp(`Created room system ${categoryName}.`);
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the room system could not be created.\n'));
         }
       }
@@ -109,7 +108,6 @@ module.exports = {
           await dbExecute('DELETE FROM room_systems WHERE id=?', [row.id]);
           return interaction.followUp(`Destroyed dynamic room system ${categoryName}.`);
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the room system could not be deleted.\n'));
         }
       }

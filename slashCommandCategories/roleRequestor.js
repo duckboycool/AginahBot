@@ -1,4 +1,4 @@
-const { parseEmoji, dbQueryOne, dbQueryAll, dbExecute, updateCategoryMessage } = require('../lib');
+const { parseEmoji, dbQueryOne, dbQueryAll, dbExecute, updateCategoryMessage, replyError } = require('../lib');
 const { ChannelType, PermissionsBitField, SlashCommandBuilder, InteractionContextType, PermissionFlagsBits,
   MessageFlags } = require('discord.js');
 
@@ -57,7 +57,6 @@ module.exports = {
             flags: MessageFlags.Ephemeral,
           });
         }).catch((e) => {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the role system could not be created.\n'));
         });
       }
@@ -102,7 +101,6 @@ module.exports = {
           await dbExecute('DELETE FROM role_systems WHERE id=?', [roleSystem.id]);
           return interaction.followUp('Role system disabled.');
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the role system could not be destroyed.\n'));
         }
       }
@@ -160,7 +158,6 @@ module.exports = {
               return interaction.followUp(`Created role category: ${categoryName}.`);
             });
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the role category could not be created.\n'));
         }
       }
@@ -202,7 +199,6 @@ module.exports = {
           await updateCategoryMessage(interaction.client, interaction.guild, categoryData.messageId);
           return interaction.followUp(`Role category renamed from ${oldName} to ${newName}.`);
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the role category could not be renamed.\n'));
         }
       }
@@ -251,7 +247,6 @@ module.exports = {
           await categoryMessage.delete();
           return interaction.followUp(`Role category ${categoryName} deleted.`);
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the role category could not be deleted.\n'));
         }
       }
@@ -292,7 +287,6 @@ module.exports = {
             flags: MessageFlags.Ephemeral,
           });
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the role category could not be deleted.\n'));
         }
       }
@@ -397,7 +391,6 @@ module.exports = {
           await updateCategoryMessage(interaction.client, interaction.guild, roleCategory.messageId);
           return interaction.followUp(`Created role ${roleName} in the ${categoryName} category.`);
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the role could not be created.\n'));
         }
       }
@@ -455,7 +448,6 @@ module.exports = {
           await updateCategoryMessage(interaction.client, interaction.guild, roleData.messageId);
           return interaction.followUp(`Renamed role ${oldName} to ${newName} in category ${categoryName}.`);
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the role could not be renamed.\n'));
         }
       }
@@ -519,7 +511,6 @@ module.exports = {
             flags: MessageFlags.Ephemeral,
           });
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the role reaction could not be changed.\n'));
         }
       }
@@ -569,7 +560,6 @@ module.exports = {
           await updateCategoryMessage(interaction.client, interaction.guild, roleData.messageId);
           return interaction.followUp(`Updated description for role ${role.name} in category ${categoryName}.`);
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the role description could not be changed.\n'));
         }
       }
@@ -619,7 +609,6 @@ module.exports = {
           await updateCategoryMessage(interaction.client, interaction.guild, roleData.messageId);
           return interaction.followUp(`Deleted role ${role.name} from category ${categoryName}.`);
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the role could not be deleted.\n'));
         }
       }

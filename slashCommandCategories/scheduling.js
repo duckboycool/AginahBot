@@ -3,7 +3,7 @@ const { SlashCommandBuilder, InteractionContextType, MessageFlags, PermissionFla
   ActionRowBuilder } = require('discord.js');
 const { generalErrorHandler } = require('../errorHandlers');
 const { dbQueryOne, dbQueryAll, dbExecute, updateScheduleBoard, verifyModeratorRole, verifyChannelPermissions,
-  formatPermissionList } = require('../lib');
+  formatPermissionList, replyError } = require('../lib');
 const forbiddenWords = require('../assets/forbiddenWords.json');
 
 const isRolePingable = async (guildId, role) => {
@@ -262,7 +262,6 @@ module.exports = {
             await interaction.followUp({ embeds: [embed], flags: MessageFlags.Ephemeral });
           }
         } catch(e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the scheduled events could not be listed.\n'));
         }
       }
@@ -389,7 +388,6 @@ module.exports = {
           await sendScheduleMessage(interaction, targetDate, title, pingRole, duration);
           return interaction.followUp('New event created.');
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the event could not be created.\n'));
         }
       }
@@ -454,7 +452,6 @@ module.exports = {
           await sendScheduleMessage(interaction, targetDate, title, pingRole, duration);
           return interaction.followUp('New event created.');
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the event could not be created.\n'));
         }
       }
@@ -524,7 +521,6 @@ module.exports = {
           await sendScheduleMessage(interaction, targetDate, title, pingRole, duration);
           return interaction.followUp('New event created.');
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the event could not be created.\n'));
         }
       }
@@ -748,7 +744,6 @@ module.exports = {
           await updateScheduleBoard(interaction.client, interaction.guild);
           return interaction.followUp(`Event with code ${eventCode.toUpperCase()} has been cancelled.`);
         } catch(e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the event could not be cancelled.\n'));
         }
       }
@@ -828,7 +823,6 @@ module.exports = {
           await updateScheduleBoard(interaction.client, interaction.guild);
           return interaction.followUp('Schedule board created.');
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the schedule board could not be created.\n'));
         }
       }
@@ -878,7 +872,6 @@ module.exports = {
           await dbExecute('DELETE FROM schedule_boards WHERE id=?', [existingBoard.id]);
           return interaction.followUp('Schedule board deleted.');
         } catch (e) {
-          console.error(e);
           return interaction.followUp(replyError('Something went wrong and the schedule board could not be deleted.\n'));
         }
       }
