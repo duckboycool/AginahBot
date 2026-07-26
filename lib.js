@@ -274,16 +274,19 @@ module.exports = {
         return;
       }
 
-      return guild.roles.create({
-        name: config.moderatorRole,
-        reason: `AginahBot requires a ${config.moderatorRole} role.`
-      }).then(async (moderatorRole) => {
-        let sql = 'INSERT INTO guild_data (guildId, moderatorRoleId) VALUES (?, ?)';
-        await module.exports.dbExecute(sql, [guild.id, moderatorRole.id]);
-      }).catch((err) => {
+      try{
+        moderatorRole = await guild.roles.create({
+          name: config.moderatorRole,
+          reason: `AginahBot requires a ${config.moderatorRole} role.`
+        });
+      } catch (err) {
         console.warn(`Unable to create moderator role for guild ${guild.id} while initializing setup.`);
         generalErrorHandler(err);
-      });
+      }
+
+      if (!moderatorRole) {
+        return;
+      }
     }
 
     // Create guild data
@@ -604,7 +607,7 @@ module.exports = {
             `${event.duration ? ` about ${event.duration} hours` : ' an undisclosed amount of time'}`
           )
           .setColor(`#${embedColors.pop()}`)
-          .setAuthor({ name: schedulingUser.displayName })
+          .setAuthor({ name: schedulingUser?.displayName || 'Unknown User' })
           .setURL(eventMessage.url)
           .setThumbnail(schedulingUser.displayAvatarURL())
           .addFields(
@@ -896,10 +899,7 @@ module.exports = {
     const roleRequestChannel = guild.channels.resolve(roleCategory.roleRequestChannelId);
     const categoryMessage = await roleRequestChannel.messages.fetch(messageId);
 
-    const messageData = { content: null, embeds: [roleInfoEmbed] };
-    if (actionRows.length > 0) {
-      messageData.components = actionRows;
-    }
+    const messageData = { content: null, embeds: [roleInfoEmbed], components: actionRows };
 
     await categoryMessage.edit(messageData);
   },

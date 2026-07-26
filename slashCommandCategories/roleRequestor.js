@@ -90,14 +90,16 @@ module.exports = {
             // Loop over the roles in each category and delete them from the server
             const roles = await dbQueryAll('SELECT roleId FROM roles WHERE categoryId=?', [roleCategory.id]);
             for (let role of roles) {
-              await interaction.guild.roles.resolve(role.roleId).delete();
+              const guildRole = interaction.guild.roles.resolve(role.roleId);
+              if (guildRole) { await guildRole.delete(); }
             }
             await dbExecute('DELETE FROM roles WHERE categoryId=?', [roleCategory.id]);
           }
 
           // Database cleanup
           await dbExecute('DELETE FROM role_categories WHERE roleSystemId=?', [roleSystem.id]);
-          interaction.guild.channels.resolve(roleSystem.roleRequestChannelId).delete();
+          const roleRequestChannel = interaction.guild.channels.resolve(roleSystem.roleRequestChannelId);
+          if (roleRequestChannel) { await roleRequestChannel.delete(); }
           await dbExecute('DELETE FROM role_systems WHERE id=?', [roleSystem.id]);
           return interaction.followUp('Role system disabled.');
         } catch (e) {
@@ -236,15 +238,17 @@ module.exports = {
 
           const roles = await dbQueryAll('SELECT roleId FROM roles WHERE categoryId=?', [roleCategory.id]);
           for (const roleObj of roles) {
-            const role = await interaction.guild.roles.fetch(roleObj.roleId);
-            await role.delete();
+            const role = interaction.guild.roles.resolve(roleObj.roleId);
+            if (role) { await role.delete(); }
           }
 
           await dbExecute('DELETE FROM roles WHERE categoryId=?', [roleCategory.id]);
           await dbExecute('DELETE FROM role_categories WHERE id=?', [roleCategory.id]);
           const roleRequestChannel = interaction.guild.channels.resolve(roleCategory.roleRequestChannelId);
-          const categoryMessage = await roleRequestChannel.messages.fetch(roleCategory.messageId);
-          await categoryMessage.delete();
+          if (roleRequestChannel) {
+            const categoryMessage = roleRequestChannel.messages.resolve(roleCategory.messageId);
+            if (categoryMessage) { await categoryMessage.delete(); }
+          }
           return interaction.followUp(`Role category ${categoryName} deleted.`);
         } catch (e) {
           return interaction.followUp(replyError('Something went wrong and the role category could not be deleted.\n'));
@@ -602,7 +606,8 @@ module.exports = {
           await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
           // Remove the role from the guild
-          await interaction.guild.roles.resolve(roleData.roleId).delete();
+          const role = interaction.guild.roles.resolve(roleData.roleId);
+          if (role) { await role.delete(); }
 
           // Delete rows from the roles table and update role category message
           await dbExecute('DELETE FROM roles WHERE id=? AND categoryId=?', [roleData.id, roleData.categoryId]);
