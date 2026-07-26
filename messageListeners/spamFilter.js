@@ -1,4 +1,5 @@
-const { MessageMentions, PermissionFlagsBits } = require('discord.js');
+const { MessageMentions, PermissionFlagsBits, messageLink } = require('discord.js');
+const { dbQueryOne } = require('../lib.js');
 
 const period = 10_000; // ms window for meeting threshold
 const threshold = 10; // Number of points needed to activate
@@ -38,19 +39,44 @@ module.exports = async (client, message) => {
 
   const points = spamPoints(recent);
   if (points >= threshold) {
-    await message.member.timeout(60 * 60 * 1000, `Hit spam filter with ${recent.length} messages.`);
+    console.debug(`Hit ${points} on user ${message.author.id}\nMessages:`);
+    for (const message of recent) {
+        console.debug(message);
+    }
+    //await message.member.timeout(60 * 60 * 1000, `Hit spam filter with ${recent.length} messages.`);
+
     // Have to delete messages one channel at a time
     const sent = new Set(recent.map((message) => message.channel));
     for (const channel of sent) {
-      await channel.bulkDelete(recent.filter((message) => message.channelId === channel.id));
+      //await channel.bulkDelete(recent.filter((message) => message.channelId === channel.id));
     };
 
-    // TODO: Set up a mod channel besides mod history for this
-    await message.channel.send({
-      content: `Timed out ${message.author} for spam detection. ` + 
-        `Hit ${points} "spam points" in ${recent.length} messages (in ${period / 1000} seconds).`
-    });
     client.recentMessages.delete(message.author.id);
+
+    let sql = `SELECT go.id, go.alertsChannelId
+               FROM guild_options go
+               JOIN guild_data gd ON go.guildDataId = gd.id
+               WHERE gd.guildId=?`;
+    const options = await dbQueryOne(sql, [message.guild.id]);
+
+    if (!options?.alertsChannelId) {
+        console.debug('No alerts channel set, skipping');
+        return;
+    }
+    const alertsChannel = await message.guild.channels.fetch(options.alertsChannelId);
+
+    let content = `Found ${message.author} for spam detection. ` + 
+      `Hit ${points} "spam points" in ${recent.length} messages (in ${period / 1000} seconds).\n\n` +
+      'Would have deleted the following messages:';
+    for (const message of recent) {
+        content += `\n* ${messageLink(message.channelId, message.id, message.guildId)}`;
+    }
+
+    await alertsChannel.send({
+      content: content
+    });
+
+    console.debug('Completed');
   } else {
     // Potential for data race here, but it probabaly won't matter much
     client.recentMessages.set(message.author.id, recent);
