@@ -39,25 +39,23 @@ module.exports = async (client, message) => {
 
   const points = spamPoints(recent);
   if (points >= threshold) {
-    console.debug(`Hit ${points} on user ${message.author.id}\nMessages:`);
-    for (const message of recent) {
-        console.debug(message);
-    }
-    //await message.member.timeout(60 * 60 * 1000, `Hit spam filter with ${recent.length} messages.`);
-
-    // Have to delete messages one channel at a time
-    const sent = new Set(recent.map((message) => message.channel));
-    for (const channel of sent) {
-      //await channel.bulkDelete(recent.filter((message) => message.channelId === channel.id));
-    };
-
-    client.recentMessages.delete(message.author.id);
-
-    let sql = `SELECT go.id, go.alertsChannelId
+    let sql = `SELECT go.id, go.alertsChannelId, go.spamPurge
                FROM guild_options go
                JOIN guild_data gd ON go.guildDataId = gd.id
                WHERE gd.guildId=?`;
     const options = await dbQueryOne(sql, [message.guild.id]);
+
+    if (options.spamPurge) {
+      await message.member.timeout(60 * 60 * 1000, `Hit spam filter with ${recent.length} messages.`);
+
+      // Have to delete messages one channel at a time
+      const sent = new Set(recent.map((message) => message.channel));
+      for (const channel of sent) {
+        await channel.bulkDelete(recent.filter((message) => message.channelId === channel.id));
+      };
+    }
+
+    client.recentMessages.delete(message.author.id);
 
     if (!options?.alertsChannelId) {
         console.debug('No alerts channel set, skipping');
@@ -66,17 +64,19 @@ module.exports = async (client, message) => {
     const alertsChannel = await message.guild.channels.fetch(options.alertsChannelId);
 
     let content = `Found ${message.author} for spam detection. ` + 
-      `Hit ${points} "spam points" in ${recent.length} messages (in ${period / 1000} seconds).\n\n` +
-      'Would have deleted the following messages:';
-    for (const message of recent) {
+      `Hit ${points} "spam points" in ${recent.length} messages (in ${period / 1000} seconds).\n\n`;
+
+    if (!options.spamPurge) {
+      content += 'Would have deleted the following messages:';
+
+      for (const message of recent) {
         content += `\n* ${messageLink(message.channelId, message.id, message.guildId)}`;
+      }
     }
 
     await alertsChannel.send({
       content: content
     });
-
-    console.debug('Completed');
   } else {
     // Potential for data race here, but it probabaly won't matter much
     client.recentMessages.set(message.author.id, recent);

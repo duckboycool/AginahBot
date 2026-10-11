@@ -100,6 +100,7 @@ const guildOptions = `CREATE TABLE IF NOT EXISTS guild_options (
   roleWhitelist TINYINT(1) NOT NULL DEFAULT 0,
   messageHistoryChannelId VARCHAR(128),
   alertsChannelId VARCHAR(128),
+  spamPurge TINYINT(1) NOT NULL DEFAULT 0,
   UNIQUE KEY guildDataId (guildDataId)
 )`;
 

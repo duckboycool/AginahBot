@@ -233,6 +233,35 @@ module.exports = {
         });
       }
     },
+    {
+      commandBuilder: new SlashCommandBuilder()
+        .setName('set-alerts-purge')
+        .setDescription('Enable or disable automatic message purging/timeout for spam filter.')
+        .addBooleanOption((opt) => opt
+          .setName('toggle')
+          .setDescription('True to enable, False to disable')
+          .setRequired(true))
+        .setContexts(InteractionContextType.Guild)
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+      async execute(interaction) {
+        const toggle = interaction.options.getBoolean('toggle', true);
+
+        const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
+        if (!guildData) {
+          return interaction.reply({
+            content: replyError('Uh-oh. Something is weird in my database.\n' + 
+              `\`\`\`guild data is missing for guild with id ${interaction.guildId}\`\`\`\n`),
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        await dbExecute('UPDATE guild_options SET spamPurge=? WHERE guildDataId=?', [toggle ? 1 : 0, guildData.id]);
+        return interaction.reply({
+          content: `${toggle ? 'Enabled' : 'Disabled'} spam auto-purge`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+    },
   ],
 };
 
