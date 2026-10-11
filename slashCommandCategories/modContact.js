@@ -1,4 +1,4 @@
-const { dbQueryOne, dbExecute, getModeratorRole, replyError } = require('../lib');
+const { dbQueryOne, dbExecute, getLeadModRole, getModRole, replyError, verifyLeadModRole } = require('../lib');
 const { ButtonBuilder, ButtonStyle, ChannelType, PermissionsBitField, ActionRowBuilder, SlashCommandBuilder,
   InteractionContextType, MessageFlags, PermissionFlagsBits, Guild, GuildMember, TextChannel } = require('discord.js');
 
@@ -75,10 +75,19 @@ module.exports = {
               .setCustomId('mod-contact')
           );
 
+          const leadModRole = await getLeadModRole(interaction.guild);
+          const modRole = await getModRole(interaction.guild);
+
+          let message = 'If you need to contact the moderators, simply click the button below. A private channel ' +
+            `visible only to you and the ${leadModRole} will be created. Your conversation will be confidential`;
+          if (modRole) {
+            message += `, but the full ${modRole} team will be able to view the log of it after.`
+          } else {
+            message += '.';
+          }
+
           const contactMessage = await channel.send({
-            content: 'If you need to contact the moderators, simply click the button below. A private ' +
-              'channel visible only to you and the moderators will be created. Your conversation will be ' +
-              'confidential.',
+            content: message,
             components: [ buttonRow ],
           });
 
@@ -147,10 +156,20 @@ module.exports = {
           .setName('user')
           .setDescription('User to open a mod-contact with')
           .setRequired(true))
+        .addBooleanOption((opt) => opt
+          .setName('lead-only')
+          .setDescription(
+            'Sets the contact to only show to lead mods. Default is true, always false if run by a regular mod.'
+          ))
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
       async execute(interaction) {
         const user = interaction.options.getUser('user', true);
+        let lead_only = interaction.options.getBoolean('lead-only');
+        // Assuming only non-lead mods should have manage channel to run this, probably fine
+        if (!verifyLeadModRole(interaction.member)) {
+          lead_only = false;
+        }
 
         try{
           // This might take a few seconds
@@ -186,7 +205,7 @@ module.exports = {
           }
 
           // Create the mod-contact channel
-          const modContact = await module.exports.createModContact(interaction, user);
+          const modContact = await module.exports.createModContact(interaction, user, null, lead_only);
           return interaction.followUp({
             content: `Mod-contact created: ${modContact}`,
             flags: MessageFlags.Ephemeral,
@@ -284,9 +303,9 @@ module.exports = {
    * @param guildMember {GuildMember}
    * @returns {Promise<TextChannel>}
    */
-  createModContact: async (interaction, guildMember, initialMessage = null) => {
+  createModContact: async (interaction, guildMember, initialMessage = null, lead_only = true) => {
     // Fetch the moderator role
-    let moderatorRole = await getModeratorRole(interaction.guild);
+    const moderatorRole = await (lead_only ? getLeadModRole(interaction.guild) : getModRole(interaction.guild));
     if (!moderatorRole) { throw new Error(`Unable to find moderator role for guild: ${interaction.guild.id}`); }
 
     // Find the id of the "Mod Contact" category in this guild
@@ -327,8 +346,7 @@ module.exports = {
     });
 
     // Send an introductory message to the channel
-    const modRole = await getModeratorRole(interaction.guild);
-    await channel.send(`This channel was created automatically to facilitate communication between the ${modRole} ` +
+    await channel.send(`This channel was created automatically to facilitate communication between the ${moderatorRole} ` +
       `team and ${guildMember}.\nWhen the issue has been resolved, a moderator may use \`/mod-contact-resolve\` to ` +
       'remove this channel.');
     if (initialMessage) {

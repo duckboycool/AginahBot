@@ -1,4 +1,4 @@
-const { verifyModeratorRole, buildControlMessagePayload, dbQueryAll, dbQueryOne, dbExecute, verifyChannelPermissions,
+const { verifyModRole, buildControlMessagePayload, dbQueryAll, dbQueryOne, dbExecute, verifyChannelPermissions,
   formatPermissionList } = require('../lib');
 const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, UserSelectMenuBuilder,
   StringSelectMenuBuilder, StringSelectMenuOptionBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
@@ -33,7 +33,7 @@ module.exports = async (client, interaction) => {
   }
 
   // Only the user who created the room or a moderator user may interact with the room commands
-  if (interaction.member.id !== channelData.ownerUserId && !await verifyModeratorRole(interaction.member)) {
+  if (interaction.member.id !== channelData.ownerUserId && !await verifyModRole(interaction.member)) {
     return interaction.reply({
       content: 'Only the event room owner or a moderator can perform actions.',
       flags: MessageFlags.Ephemeral,
@@ -64,7 +64,7 @@ module.exports = async (client, interaction) => {
       let onlySelfSql = '';
       const params = [interaction.guild.id];
 
-      if (!await verifyModeratorRole(interaction.member)) {
+      if (!await verifyModRole(interaction.member)) {
         onlySelfSql = 'AND se.schedulingUserId = ?';
         params.push(interaction.user.id);
       }

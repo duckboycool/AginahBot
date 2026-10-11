@@ -2,7 +2,7 @@ const Discord = require('discord.js');
 const { SlashCommandBuilder, InteractionContextType, MessageFlags, PermissionFlagsBits, ButtonBuilder, ButtonStyle,
   ActionRowBuilder } = require('discord.js');
 const { generalErrorHandler } = require('../errorHandlers');
-const { dbQueryOne, dbQueryAll, dbExecute, updateScheduleBoard, verifyModeratorRole, verifyChannelPermissions,
+const { dbQueryOne, dbQueryAll, dbExecute, updateScheduleBoard, verifyModRole, verifyChannelPermissions,
   formatPermissionList, replyError } = require('../lib');
 const forbiddenWords = require('../assets/forbiddenWords.json');
 
@@ -578,7 +578,7 @@ module.exports = {
         }
 
         // If the user is not a moderator and not the scheduling user, deny the cancellation
-        if ((interaction.user.id !== eventData.schedulingUserId) && !await verifyModeratorRole(interaction.member)) {
+        if ((interaction.user.id !== eventData.schedulingUserId) && !await verifyModRole(interaction.member)) {
           const schedulingUser = await interaction.guild.members.fetch(eventData.schedulingUserId);
           return interaction.followUp({
             content: 'This event can only be cancelled by the user who scheduled it ' +
@@ -683,7 +683,7 @@ module.exports = {
           }
 
           // If the user is not a moderator and not the scheduling user, deny the cancellation
-          if ((interaction.user.id !== eventData.schedulingUserId) && !await verifyModeratorRole(interaction.member)) {
+          if ((interaction.user.id !== eventData.schedulingUserId) && !await verifyModRole(interaction.member)) {
             const schedulingUser = await interaction.guild.members.fetch(eventData.schedulingUserId);
             return interaction.followUp({
               content: 'This event can only be cancelled by the user who scheduled it ' +

@@ -1,4 +1,4 @@
-const { verifyModeratorRole } = require('../lib');
+const { verifyModRole } = require('../lib');
 const { MessageFlags } = require('discord.js');
 
 module.exports = async (client, interaction) => {
@@ -13,7 +13,7 @@ module.exports = async (client, interaction) => {
   const command = commandParts[1];
 
   // Only the user who created the room or a moderator user may interact with the room commands
-  if (interaction.member.id !== commandParts[2] && !await verifyModeratorRole(interaction.member)) {
+  if (interaction.member.id !== commandParts[2] && !await verifyModRole(interaction.member)) {
     return interaction.reply({
       content: 'Only the event room owner or a moderator can perform actions.',
       flags: MessageFlags.Ephemeral,

@@ -1,4 +1,4 @@
-const { dbQueryOne, dbExecute, getModeratorRole } = require('../lib');
+const { dbQueryOne, dbExecute, getLeadModRole } = require('../lib');
 const { SlashCommandBuilder, MessageFlags, InteractionContextType, ChannelType, PermissionsBitField } = require('discord.js');
 
 module.exports = {
@@ -24,7 +24,7 @@ module.exports = {
         }
 
         await interaction.deferReply({flags: MessageFlags.Ephemeral});
-        const moderatorRole = await getModeratorRole(interaction.guild);
+        const leadModRole = await getLeadModRole(interaction.guild);
         const messageHistoryChannel = await interaction.guild.channels.create({
           name: 'message-history',
           type: ChannelType.GuildText,
@@ -35,8 +35,8 @@ module.exports = {
               deny: [ PermissionsBitField.Flags.ViewChannel ],
             },
             {
-              // Moderators may view this channel
-              id: moderatorRole.id,
+              // Lead moderators may view this channel
+              id: leadModRole.id,
               allow: [ PermissionsBitField.Flags.ViewChannel ],
             },
             {

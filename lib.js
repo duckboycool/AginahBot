@@ -162,10 +162,16 @@ module.exports = {
   },
 
   // Function which returns a promise which will resolve to true or false
-  verifyModeratorRole: (guildMember) => new Promise(async (resolve) => {
+  verifyModRole: (guildMember) => new Promise(async (resolve) => {
+    if (module.exports.verifyLeadModRole(guildMember)) { resolve(true); }
+    const moderatorRole = await module.exports.getModRole(guildMember.guild);
+    resolve(guildMember.roles.cache.has(moderatorRole.id));
+  }),
+
+  verifyLeadModRole: (guildMember) => new Promise(async (resolve) => {
     if (module.exports.verifyIsAdmin(guildMember)) { resolve(true); }
-    const moderatorRole = await module.exports.getModeratorRole(guildMember.guild);
-    resolve(moderatorRole.position <= guildMember.roles.highest.position);
+    const leadModRole = await module.exports.getLeadModRole(guildMember.guild);
+    resolve(guildMember.roles.cache.has(leadModRole.id));
   }),
 
   verifyIsAdmin: (guildMember) => {
@@ -219,7 +225,33 @@ module.exports = {
 
   formatPermissionList: (permissions = []) => permissions.join(', '),
 
-  getModeratorRole: (guild) => new Promise(async (resolve) => {
+  getLeadModRole: (guild) => new Promise(async (resolve) => {
+    let leadModRole = null;
+
+    // If this guild has a known lead mod role id, fetch that role
+    let sql = 'SELECT leadModRoleId FROM guild_data WHERE guildId=?';
+    let result = await module.exports.dbQueryOne(sql, [guild.id]);
+    if (result && result.hasOwnProperty('leadModRoleId') && result.leadModRoleId) {
+      leadModRole = guild.roles.resolve(result.leadModRoleId);
+      if (leadModRole) {
+        return resolve(leadModRole);
+      }
+    }
+
+    // The guild's lead mod role is not known, or it has been deleted. Attempt to find a moderator role
+    // and update the database
+    leadModRole = await module.exports.discoverLeadModRole(guild);
+    if (leadModRole) {
+      await module.exports.dbExecute('UPDATE guild_data SET leadModRoleId=? WHERE guildId=?',
+        [leadModRole.id, guild.id]);
+    }
+
+    // Resolve with the newly found lead mod role, or with null of no role could be found
+    return resolve(leadModRole || null);
+  }),
+
+  getModRole: (guild) => new Promise(async (resolve) => {
+    // Regular mod role is considered optional, so simply fetch it if it's set
     let modRole = null;
 
     // If this guild has a known moderator role id, fetch that role
@@ -232,66 +264,57 @@ module.exports = {
       }
     }
 
-    // The guild's moderator role is not known, or it has been deleted. Attempt to find a moderator role
-    // and update the database
-    modRole = await module.exports.discoverModeratorRole(guild);
-    if (modRole) {
-      await module.exports.dbExecute('UPDATE guild_data SET moderatorRoleId=? WHERE guildId=?',
-        [modRole.id, guild.id]);
-    }
-
-    // Resolve with the newly found moderator role, or with null of no role could be found
     return resolve(modRole || null);
   }),
 
   /**
-   * Search a guild for a role with whose name matches config.moderatorRole
+   * Search a guild for a role with whose name matches config.leadModRole
    * @param guild
    * @returns Promise which resolves to a Discord Role object, or null if no role could be found
    */
-  discoverModeratorRole: async (guild) => {
-    let modRole = null;
+  discoverLeadModRole: async (guild) => {
+    let leadModRole = null;
     await guild.roles.cache.each((role) => {
-      if (modRole !== null) { return; }
-      if (role.name === config.moderatorRole) {
-        modRole = role;
+      if (leadModRole !== null) { return; }
+      if (role.name === config.leadModRole) {
+        leadModRole = role;
       }
     });
-    return modRole;
+    return leadModRole;
   },
 
   handleGuildCreate: async (client, guild) => {
     console.info(`Creating db structure after joining guild ${guild.id}`);
 
     // Find this guild's moderator role id
-    let moderatorRole = await module.exports.getModeratorRole(guild);
-    if (!moderatorRole) {
+    let leadModRole = await module.exports.getLeadModRole(guild);
+    if (!leadModRole) {
       const botMember = getBotGuildMember(guild, client);
       const canManageRoles = !!botMember?.permissions?.has(PermissionFlagsBits.ManageRoles);
       if (!canManageRoles) {
         console.warn(`Unable to initialize guild setup for guild ${guild.id}: missing Manage Roles ` +
-          `permission to create required role "${config.moderatorRole}".`);
+          `permission to create required role "${config.leadModRole}".`);
         return;
       }
 
       try{
-        moderatorRole = await guild.roles.create({
-          name: config.moderatorRole,
-          reason: `AginahBot requires a ${config.moderatorRole} role.`
+        leadModRole = await guild.roles.create({
+          name: config.leadModRole,
+          reason: `AginahBot requires a ${config.leadModRole} role.`
         });
       } catch (err) {
-        console.warn(`Unable to create moderator role for guild ${guild.id} while initializing setup.`);
+        console.warn(`Unable to create ${config.leadModRole} role for guild ${guild.id} while initializing setup.`);
         generalErrorHandler(err);
       }
 
-      if (!moderatorRole) {
+      if (!leadModRole) {
         return;
       }
     }
 
     // Create guild data
-    let sql = 'INSERT INTO guild_data (guildId, moderatorRoleId) VALUES (?, ?)';
-    await module.exports.dbExecute(sql, [guild.id, moderatorRole.id]);
+    let sql = 'INSERT INTO guild_data (guildId, leadModRoleId) VALUES (?, ?)';
+    await module.exports.dbExecute(sql, [guild.id, leadModRole.id]);
 
     // Create guild options
     const guildData = await module.exports.dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [guild.id]);
@@ -346,11 +369,11 @@ module.exports = {
       if (!guildData) {
         const botMember = getBotGuildMember(guild, client);
         const canManageRoles = !!botMember?.permissions?.has(PermissionFlagsBits.ManageRoles);
-        const discoveredModeratorRole = await module.exports.discoverModeratorRole(guild);
+        const discoveredLeadModRole = await module.exports.discoverLeadModRole(guild);
 
         console.warn(`Unable to verify guild setup for guild ${guild.id}. No guild_data entry found after ` +
           `setup attempt. Diagnostics: botMemberResolved=${!!botMember}, canManageRoles=${canManageRoles}, ` +
-          `moderatorRoleFoundByName=${!!discoveredModeratorRole}.`);
+          `leadModRoleFoundByName=${!!discoveredLeadModRole}.`);
         continue;
       }
 

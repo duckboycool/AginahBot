@@ -4,7 +4,8 @@ const config = require('./config.json');
 const guildData = `CREATE TABLE IF NOT EXISTS guild_data (
     id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     guildId VARCHAR(64) NOT NULL UNIQUE,
-    moderatorRoleId VARCHAR(64) NOT NULL
+    leadModRoleId VARCHAR(64) NOT NULL,
+    moderatorRoleId VARCHAR(64)
 )`;
 
 const roleSystems = `CREATE TABLE IF NOT EXISTS role_systems (

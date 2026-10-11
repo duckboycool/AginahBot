@@ -1,4 +1,4 @@
-const { dbExecute, getModeratorRole } = require('../lib');
+const { dbExecute, getModRole } = require('../lib');
 
 const ALERT_CUTOFF = 900;
 
@@ -29,6 +29,6 @@ module.exports = async (client, addedMembers, removedMembers) => {
     }
   }
 
-  const moderator = await getModeratorRole(thread.guild);
+  const moderator = await getModRole(thread.guild);
   await thread.send(`Adding ${moderator}s to this thread as it is approaching the member cap.`);
 };

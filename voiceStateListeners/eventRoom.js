@@ -1,5 +1,5 @@
 const { generalErrorHandler } = require('../errorHandlers');
-const { getModeratorRole, dbQueryOne, dbExecute, buildControlMessagePayload } = require('../lib');
+const { dbQueryOne, dbExecute, buildControlMessagePayload } = require('../lib');
 const { ChannelType } = require('discord.js');
 
 const channelNames = [
@@ -23,15 +23,6 @@ module.exports = async (client, oldState, newState) => {
                  AND rs.newGameChannelId=?`;
     const roomSystemStartGame = await dbQueryOne(sql, [newState.guild.id, newState.channel.id]);
     if (roomSystemStartGame) {
-      const moderatorRole = await getModeratorRole(newState.guild);
-      // If no moderator role can be found
-      if (!moderatorRole) {
-        await newState.member.send(`Uh, oh! It looks like \`${newState.guild.name}\` doesn't have a \`Moderator\` ` +
-          'role. Please tell an admin about this!');
-        console.error(`No moderator role could be found for guild ${newState.guild.name} (${newState.guild.id})`);
-        return;
-      }
-
       // Choose a channel name
       const channelName = channelNames[Math.floor(Math.random() * channelNames.length)];
 
