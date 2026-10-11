@@ -7,7 +7,7 @@ module.exports = {
   commands: [
     {
       commandBuilder: new SlashCommandBuilder()
-        .setName('grant-perms')
+        .setName('thread-grant-perms')
         .setDescription('Grant a user permission to manage the current thread')
         .addUserOption((opt) => opt
           .setName('user')
@@ -77,7 +77,7 @@ module.exports = {
     },
     {
       commandBuilder: new SlashCommandBuilder()
-        .setName('revoke-perms')
+        .setName('thread-revoke-perms')
         .setDescription('Revoke permission for a user to manage the current thread')
         .addUserOption((opt) => opt
           .setName('user')
@@ -240,7 +240,7 @@ module.exports = {
     },
     {
       commandBuilder: new SlashCommandBuilder()
-        .setName('perms-list')
+        .setName('thread-perms-list')
         .setDescription('List all users with thread permissions')
         .addChannelOption((opt) => opt
           .setName('channel')
@@ -286,7 +286,7 @@ module.exports = {
     },
     {
       commandBuilder: new SlashCommandBuilder()
-        .setName('tag-thread')
+        .setName('thread-tag')
         .setDescription('Add a tag to the current thread')
         .addStringOption((opt) => opt
           .setName('tag')
@@ -362,7 +362,7 @@ module.exports = {
     },
     {
       commandBuilder: new SlashCommandBuilder()
-        .setName('untag-thread')
+        .setName('thread-untag')
         .setDescription('Remove a tag from the current thread')
         .addStringOption((opt) => opt
           .setName('tag')
@@ -437,7 +437,7 @@ module.exports = {
     },
     {
       commandBuilder: new SlashCommandBuilder()
-        .setName('set-title')
+        .setName('thread-set-title')
         .setDescription('Change title of current thread')
         .addStringOption((opt) => opt
           .setName('title')

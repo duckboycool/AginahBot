@@ -103,7 +103,7 @@ module.exports = {
     },
     {
       commandBuilder: new SlashCommandBuilder()
-        .setName('purge-thread')
+        .setName('thread-purge')
         .setDescription('Remove all members (except mods) from the current thread who are inactive.')
         .addIntegerOption((opt) => opt
           .setName('days')
