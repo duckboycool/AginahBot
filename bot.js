@@ -33,7 +33,7 @@ client.recentMessages = new Map(); // For spam bot detection
 // Load routines and run them once per hour
 fs.readdirSync('./routines').filter((file) => file.endsWith('.js')).forEach((routineFile) => {
   const routine = require(`./routines/${routineFile}`);
-  setInterval(routine, 3600000);
+  setInterval(() => routine(client), 3600000);
 });
 
 // Load command category files
