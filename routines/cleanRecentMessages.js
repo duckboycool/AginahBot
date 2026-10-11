@@ -7,9 +7,9 @@ module.exports = (client) => {
   for (const [user, messages] of client.recentMessages.entries()) {
     const filtered = messages.filter((msg) => curTime < msg.createdTimestamp + period);
     if (filtered.length == 0) {
-      map.delete(user);
+      client.recentMessages.delete(user);
     } else {
-      map.set(user, filtered);
+      client.recentMessages.set(user, filtered);
     }
   }
 
