@@ -8,7 +8,7 @@ module.exports = {
     {
       commandBuilder: new SlashCommandBuilder()
         .setName('thread-grant-perms')
-        .setDescription('Grant a user permission to manage the current thread')
+        .setDescription('Grant a user permission to manage the current thread.')
         .addUserOption((opt) => opt
           .setName('user')
           .setDescription('User to grant permission for')
@@ -78,7 +78,7 @@ module.exports = {
     {
       commandBuilder: new SlashCommandBuilder()
         .setName('thread-revoke-perms')
-        .setDescription('Revoke permission for a user to manage the current thread')
+        .setDescription('Revoke permission for a user to manage the current thread.')
         .addUserOption((opt) => opt
           .setName('user')
           .setDescription('User to revoke permissions for')
@@ -241,7 +241,7 @@ module.exports = {
     {
       commandBuilder: new SlashCommandBuilder()
         .setName('thread-perms-list')
-        .setDescription('List all users with thread permissions')
+        .setDescription('List all users with thread permissions.')
         .addChannelOption((opt) => opt
           .setName('channel')
           .setDescription('Channel for which permissions will be displayed. Defaults to current channel.')

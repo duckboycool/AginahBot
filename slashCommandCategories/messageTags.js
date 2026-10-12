@@ -60,7 +60,7 @@ module.exports = {
         .setDescription('Remove a &tag from a server.')
         .addStringOption((opt) => opt
           .setName('tag-name')
-          .setDescription('Name of the tag to be removed.')
+          .setDescription('Name of the tag to be removed')
           .setRequired(true))
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
