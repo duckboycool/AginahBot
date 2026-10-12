@@ -79,9 +79,10 @@ module.exports = {
           const modRole = await getModRole(interaction.guild);
 
           let message = 'If you need to contact the moderators, simply click the button below. A private channel ' +
-            `visible only to you and the ${leadModRole} will be created. Your conversation will be confidential`;
+            `visible only to you and the ${leadModRole} team will be created. Your conversation will be confidential`;
           if (modRole) {
-            message += `, but the full ${modRole} team will be able to view the log of it after.`
+            message += `, but the full ${modRole} team will be able to view the log of it after and may be added to ` +
+              'the contact if needed.'
           } else {
             message += '.';
           }
