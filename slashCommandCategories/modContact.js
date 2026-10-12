@@ -166,8 +166,11 @@ module.exports = {
       async execute(interaction) {
         const user = interaction.options.getUser('user', true);
         let lead_only = interaction.options.getBoolean('lead-only');
+        if (lead_only == null) {
+          lead_only = true;
+        }
         // Assuming only non-lead mods should have manage channel to run this, probably fine
-        if (!verifyLeadModRole(interaction.member)) {
+        if (!await verifyLeadModRole(interaction.member)) {
           lead_only = false;
         }
 
