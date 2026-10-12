@@ -207,6 +207,25 @@ module.exports = {
     },
     {
       commandBuilder: new SlashCommandBuilder()
+        .setName('set-lead-mod-role')
+        .setDescription('Assign a new role to use as the Lead Moderator role when determining moderator actions.')
+        .addRoleOption((opt) => opt
+          .setName('role')
+          .setDescription('New lead moderator role')
+          .setRequired(true))
+        .setContexts(InteractionContextType.Guild)
+        .setDefaultMemberPermissions(0),
+      async execute(interaction) {
+        const role = interaction.options.getRole('role', true);
+        await dbExecute('UPDATE guild_data SET leadModRoleId=? WHERE guildId=?', [role.id, interaction.guildId]);
+        return interaction.reply({
+          content: `Lead Moderator role updated to ${role}`,
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+    },
+    {
+      commandBuilder: new SlashCommandBuilder()
         .setName('set-alerts-channel')
         .setDescription('Change channel to put spam reports in.')
         .addChannelOption((opt) => opt
