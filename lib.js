@@ -158,7 +158,7 @@ module.exports = {
 
     let sql = 'SELECT 1 FROM thread_management WHERE guildDataId=? AND channelId=? AND userId=?';
     const permission = !!await module.exports.dbQueryOne(sql, [guildId, channel.id, member.id]);
-    return permission || member.permissions.has(PermissionFlagsBits.ManageMessages);
+    return permission || await module.exports.verifyModRole(member);
   },
 
   // Function which returns a promise which will resolve to true or false

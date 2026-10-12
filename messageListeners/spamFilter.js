@@ -23,7 +23,7 @@ const spamPoints = (messageList) => {
 };
 
 module.exports = async (client, message) => {
-  // Ignore mod messages
+  // Ignore mod messages. Could use verifyModRole, but that might send a request on every message.
   if (message.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
     return;
   }
