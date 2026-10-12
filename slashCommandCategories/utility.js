@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, InteractionContextType, MessageFlags, PermissionFlagsBits } = require('discord.js');
 const tmp = require('tmp');
 const fs = require('fs');
-const { dbExecute, dbQueryOne, managesThread, replyError } = require('../lib');
+const { dbExecute, dbQueryOne, managesThread, replyError, verifyModRole } = require('../lib');
 
 module.exports = {
   category: 'Utility Commands',
@@ -114,8 +114,15 @@ module.exports = {
           .setDescription('Run a test to see how many users would be removed without actually removing them')
           .setRequired(false))
         .setContexts(InteractionContextType.Guild)
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageThreads),
       async execute(interaction) {
+        if (!await verifyModRole(interaction.member)) {
+          return interaction.reply({
+            content: 'Only moderators can delete world info entries.',
+            flags: MessageFlags.Ephemeral,
+          })
+        }
+
         const days = interaction.options.getInteger('days') ?? 60;
         const doPurge = !interaction.options.getBoolean('dry-run');
 
