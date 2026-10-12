@@ -1,4 +1,5 @@
-const { SlashCommandBuilder, InteractionContextType, PermissionFlagsBits, MessageFlags } = require('discord.js');
+const { SlashCommandBuilder, InteractionContextType, PermissionFlagsBits, MessageFlags, EmbedBuilder,
+  escapeMarkdown } = require('discord.js');
 const { dbExecute, dbQueryAll, dbQueryOne, verifyModRole } = require('../lib');
 
 const autocomplete_world = async (interaction) => {
@@ -40,8 +41,20 @@ module.exports = {
           });
         }
 
+        const embed = new EmbedBuilder()
+          .setTitle(`${escapeMarkdown(match.worldName)} info`)
+          .setColor('#e67e22')
+          .setTimestamp(new Date())
+          .addFields({ name: 'World Channel', value: `<#${match.channelId}>` });
+        
+        if (/^https?:\/\//.test(match.releaseLink)) {
+          embed.addFields({ name: 'Release Link', value: match.releaseLink });
+        } else {
+          embed.addFields({ name: 'Release Info', value: `*${escapeMarkdown(match.releaseLink)}*` });
+        }
+
         return interaction.reply({
-          content: `**${match.worldName} info**\n\nWorld channel: <#${match.channelId}>\nRelease link: <${match.releaseLink}>`,
+          embeds: [embed],
         });
       },
       autocomplete: autocomplete_world
@@ -63,6 +76,10 @@ module.exports = {
           .setName('release')
           .setDescription('Link to the world\'s release, or text describing why one is unavailable')
           .setRequired(false))
+        .addStringOption((opt) => opt
+          .setName('channel-id')
+          .setDescription('Direct id input for channel, needed for channel outside current server')
+          .setRequired(false))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
@@ -75,6 +92,10 @@ module.exports = {
 
         const newName = interaction.options.getString('world', true);
         let channelId = interaction.options.getChannel('channel')?.id;
+        if (!channelId) {
+          const idInput = interaction.options.getString('channel-id');
+          if (/^\d+$/.test(idInput)) channelId = idInput;
+        }
         let releaseLink = interaction.options.getString('release');
 
         const match = await dbQueryOne('SELECT * FROM apworld_info WHERE worldName=?', [newName]);
