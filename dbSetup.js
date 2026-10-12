@@ -133,6 +133,20 @@ const scheduleBoards = `CREATE TABLE IF NOT EXISTS schedule_boards (
     messageId VARCHAR(64) NOT NULL
 )`;
 
+const apworldInfo = `CREATE TABLE IF NOT EXISTS apworld_info (
+    id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    worldName VARCHAR(255) NOT NULL,
+    releaseLink VARCHAR(255) NOT NULL,
+    channelId VARCHAR(64) NOT NULL
+)`;
+
+const apworldAlaises = `CREATE TABLE IF NOT EXISTS apworld_aliases (
+    id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    worldId BIGINT NOT NULL,
+    alias VARCHAR(255) NOT NULL
+)`;
+
+
 const db = mysql.createConnection({
   host: config.dbHost,
   user: config.dbUser,
@@ -160,4 +174,6 @@ db.query(pingableRoles, handler);
 db.query(threadManagement, handler);
 db.query(alertedThreads, handler);
 db.query(scheduleBoards, handler);
+db.query(apworldInfo, handler);
+db.query(apworldAlaises, handler);
 db.end();
