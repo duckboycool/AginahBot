@@ -242,6 +242,81 @@ module.exports = {
         });
       }
     },
+    {
+      commandBuilder: new SlashCommandBuilder()
+        .setName('add-pinned-post')
+        .setDescription('Set forum post to automatically be re-pinned.')
+        .addChannelOption((opt) => opt
+          .setName('post')
+          .setDescription('Post to enable auto-pinning for')
+          .setRequired(true))
+        .setContexts(InteractionContextType.Guild)
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageThreads),
+      async execute(interaction) {
+        const post = interaction.options.getChannel('post', true);
+
+        if (!post.isThread()) {
+          return interaction.reply({
+            content: 'Given channel is not a post.',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+        if (!post.parent.isThreadOnly()) {
+          return interaction.reply({
+            content: 'Given thread is not a forum post.',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        const sql = 'SELECT postId FROM pinned_forum_posts WHERE channelId=?';
+        const forumAlreadyPinned = await dbQueryOne(sql, [post.parentId]);
+        if (forumAlreadyPinned) {
+          return interaction.reply({
+            content: `The post <#${forumAlreadyPinned.postId}> is already pinned in that forum.`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        await dbExecute('INSERT INTO pinned_forum_posts (channelId, postId) VALUES (?, ?)', [post.parentId, post.id]);
+        return interaction.reply({
+          content: 'Enabled auto-pinning of post.',
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+    },
+    {
+      commandBuilder: new SlashCommandBuilder()
+        .setName('remove-pinned-post')
+        .setDescription('Remove auto-pinning from a post.')
+        .addChannelOption((opt) => opt
+          .setName('post')
+          .setDescription('Post to disable auto-pinning for')
+          .setRequired(true))
+        .setContexts(InteractionContextType.Guild)
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageThreads),
+      async execute(interaction) {
+        const post = interaction.options.getChannel('post', true);
+
+        if (!post.isThread()) {
+          return interaction.reply({
+            content: 'Given channel is not a post.',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+        if (!post.parent.isThreadOnly()) {
+          return interaction.reply({
+            content: 'Given thread is not a forum post.',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        await dbExecute('DELETE FROM pinned_forum_posts WHERE postId=?', [post.id]);
+        return interaction.reply({
+          content: 'Disabled auto-pinning of post.',
+          flags: MessageFlags.Ephemeral,
+        });
+      }
+    },
   ],
 };
 

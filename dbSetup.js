@@ -126,6 +126,12 @@ const alertedThreads = `CREATE TABLE IF NOT EXISTS alerted_threads (
     threadId VARCHAR(64) UNIQUE KEY NOT NULL
 )`;
 
+const pinnedForumPosts = `CREATE TABLE IF NOT EXISTS pinned_forum_posts (
+    id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    channelId VARCHAR(64) UNIQUE KEY NOT NULL,
+    postId VARCHAR(64) UNIQUE KEY NOT NULL
+)`;
+
 const scheduleBoards = `CREATE TABLE IF NOT EXISTS schedule_boards (
     id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     guildDataId BIGINT NOT NULL,
@@ -173,6 +179,7 @@ db.query(guildOptions, handler);
 db.query(pingableRoles, handler);
 db.query(threadManagement, handler);
 db.query(alertedThreads, handler);
+db.query(pinnedForumPosts, handler);
 db.query(scheduleBoards, handler);
 db.query(apworldInfo, handler);
 db.query(apworldAlaises, handler);
