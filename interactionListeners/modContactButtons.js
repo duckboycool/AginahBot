@@ -1,5 +1,5 @@
 const { modContactEnabled, modContactExists } = require('../slashCommandCategories/modContact');
-const {ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle} = require('discord.js');
+const { ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle, MessageFlags } = require('discord.js');
 const { dbExecute } = require('../lib');
 
 module.exports = async (client, interaction) => {
@@ -22,10 +22,11 @@ module.exports = async (client, interaction) => {
     try {
       // Attempt to fetch this channel from the Discord API and inform the user a mod-contact already exists
       const existingChannel = await interaction.guild.channels.fetch(existingChannelId);
-      await interaction.user.send(`You already have a mod-contact open here: ${existingChannel}`);
-
-      // Inform Discord the interaction was handled, but do not change the original message
-      return interaction.update({});
+ 
+      return await interaction.reply({
+        content: `You already have a mod-contact open here: ${existingChannel}`,
+        flags: MessageFlags.Ephemeral,
+      });
     } catch (e) {
       // The database claims this channel exists, but the Discord API disagrees. Set this mod contact as
       // resolved and allow the system to open a new one. This can happen if a mod-contact user channel
