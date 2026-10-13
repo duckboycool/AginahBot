@@ -1,4 +1,4 @@
-const { dbExecute, getModRole } = require('../lib');
+const { dbExecute, dbQueryOne, getModRole } = require('../lib');
 
 const ALERT_CUTOFF = 900;
 
@@ -6,28 +6,23 @@ const ALERT_CUTOFF = 900;
 module.exports = async (client, addedMembers, removedMembers) => {
   const newMember = addedMembers.first();
 
-  // Exit if there's no new members, or thread member count is below cap
-  if (!newMember) {
+  // Exit if there's no new members besides the bot, or thread member count is below cap
+  if (!newMember || (newMember.id === client.user.id && addedMembers.size === 1)) {
     return;
   }
-  
+
   const thread = newMember.thread;
   if (thread.memberCount <= ALERT_CUTOFF) {
     return;
   }
 
-  // Try to mark thread as alerted, or exit if it's already marked
-  try {
-    await dbExecute('INSERT INTO alerted_threads (threadId) VALUES (?)', [thread.id]);
-  } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') {
-      // Thread is already alerted
-      return;
-    } else {
-      console.log(err);
-      return;
-    }
+  // Mark thread as alerted, or exit if it's already marked
+  const alerted = await dbQueryOne('SELECT id FROM alerted_threads WHERE threadId=?', [thread.id]);
+  if (alerted) {
+    return;
   }
+
+  await dbExecute('INSERT INTO alerted_threads (threadId) VALUES (?)', [thread.id]);
 
   const moderator = await getModRole(thread.guild);
   await thread.send(`Adding ${moderator}s to this thread as it is approaching the member cap.`);
