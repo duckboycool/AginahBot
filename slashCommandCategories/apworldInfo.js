@@ -5,7 +5,7 @@ const { dbExecute, dbQueryAll, dbQueryOne, verifyModRole } = require('../lib');
 const autocomplete_world = async (interaction) => {
   const curValue = interaction.options.getString('world', true);
   if (!curValue) {
-    return await interaction.respond([]);
+    return interaction.respond([]);
   }
 
   // Probably a better way to perform this search
@@ -15,7 +15,7 @@ const autocomplete_world = async (interaction) => {
   const escapedVal = curValue.replaceAll(/([%_[])/g, '[$1]');
   const matches = await dbQueryAll(sql, [escapedVal, escapedVal]);
 
-  return await interaction.respond(matches.map((world) => ({ name: world.worldName, value: world.worldName })));
+  return interaction.respond(matches.map((world) => ({ name: world.worldName, value: world.worldName })));
 };
 
 module.exports = {
@@ -269,23 +269,23 @@ module.exports = {
       async autocomplete(interaction) {
         const field = interaction.options.getFocused(true);
         if (field.name === 'world') {
-          return await autocomplete_world(interaction);
+          return autocomplete_world(interaction);
         }
 
         const worldName = interaction.options.getString('world');
         if (!worldName || field.name !== 'alias') {
-          return await interaction.respond([]);
+          return interaction.respond([]);
         }
         const match = await dbQueryOne('SELECT * FROM apworld_info WHERE worldName=?', [worldName]);
         if (!match) {
-          return await interaction.respond([]);
+          return interaction.respond([]);
         }
 
         const sql = `SELECT alias FROM apworld_aliases WHERE worldId=? AND alias LIKE CONCAT('%', ?, '%') LIMIT 25`;
         const escapedVal = field.value.replaceAll(/([%_[])/g, '[$1]');
 
         const matches = await dbQueryAll(sql, [match.id, escapedVal]);
-        return await interaction.respond(matches.map((match) => ({ name: match.alias, value: match.alias })));
+        return interaction.respond(matches.map((match) => ({ name: match.alias, value: match.alias })));
       },
     },
   ]

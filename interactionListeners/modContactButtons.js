@@ -23,7 +23,7 @@ module.exports = async (client, interaction) => {
       // Attempt to fetch this channel from the Discord API and inform the user a mod-contact already exists
       const existingChannel = await interaction.guild.channels.fetch(existingChannelId);
  
-      return await interaction.reply({
+      return interaction.reply({
         content: `You already have a mod-contact open here: ${existingChannel}`,
         flags: MessageFlags.Ephemeral,
       });
