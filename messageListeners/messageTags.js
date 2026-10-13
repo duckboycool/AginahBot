@@ -22,14 +22,11 @@ module.exports = async (client, message) => {
                   AND mt.tagName=?`;
     const row = await dbQueryOne(sql, [message.guild.id, tag]);
 
-    console.debug(`Recognized ${tag}, found is ${row != null}`);
     if (row != null) {
       const lastTimestamp = client.lastTagUse.get(`${row.id};${message.channelId}`);
       if (lastTimestamp == null || message.createdTimestamp > lastTimestamp + msCooldown) {
         await message.channel.send(row.tagContent);
         client.lastTagUse.set(`${row.id};${message.channelId}`, message.createdTimestamp);
-      } else {
-        console.debug("Hit cooldown");
       }
     }
   }
