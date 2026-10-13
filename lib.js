@@ -927,6 +927,61 @@ module.exports = {
     await categoryMessage.edit(messageData);
   },
 
+  saveMessageLog: async (channel, cuttoffId, limit=100) => {
+    // Control variables
+    const logs = [];
+    let lastMessageId = cuttoffId;
+    if (!lastMessageId) {
+      return null;
+    }
+
+    while (logs.length < limit) {
+      // Determine number of messages to be fetched this request
+      const fetchLimit = ((limit - logs.length) > 100) ? 100 : (limit - logs.length);
+
+      // Fetch messages from Discord API
+      const messages = await channel.messages.fetch({
+        before: lastMessageId,
+        limit: fetchLimit,
+      });
+
+      // Save relevant message data
+      messages.each((msg) => {
+        logs.push({
+          id: msg.id,
+          user: `${msg?.member?.displayName || msg.author.username}`,
+          timestamp: msg.createdTimestamp,
+          content: msg.content,
+        });
+      });
+
+      // If no more messages are available, stop fetching. Also guards against empty fetches to
+      // avoid reading logs[-1]
+      if (messages.size === 0) { break; }
+
+      // Begin fetching from the earliest message
+      lastMessageId = logs[logs.length - 1].id;
+
+      // If no more messages are available, stop fetching
+      if (messages.size < fetchLimit) { break; }
+
+      // Delay to avoid ratelimit
+      await new Promise((resolve) => setTimeout(resolve, 600));
+    }
+
+    // Reverse the array so the oldest messages occur first, and will therefore be printed earlier
+    // in the output
+    logs.reverse();
+
+    // Build output
+    let output = '';
+    logs.forEach((log) => {
+      output += `${log.user} (${new Date(log.timestamp).toUTCString()}):\n${log.content}\n\n`;
+    });
+
+    return output;
+  },
+
   replyError: (error) => {
     const errorId = Math.floor(Math.random() * 900_000) + 100_000;
     const reportString = `Please report this bug in <#1075616226342096927>. (error id: ${errorId})`;

@@ -1,4 +1,7 @@
-const { dbQueryOne, dbExecute, getLeadModRole, getModRole, replyError, verifyLeadModRole } = require('../lib');
+const { dbQueryOne, dbExecute, getLeadModRole, getModRole, replyError, saveMessageLog,
+  verifyLeadModRole } = require('../lib');
+const tmp = require('tmp');
+const fs = require('fs');
 const { ButtonBuilder, ButtonStyle, ChannelType, PermissionsBitField, ActionRowBuilder, SlashCommandBuilder,
   InteractionContextType, MessageFlags, PermissionFlagsBits, Guild, GuildMember, TextChannel } = require('discord.js');
 
@@ -227,6 +230,14 @@ module.exports = {
       commandBuilder: new SlashCommandBuilder()
         .setName('mod-contact-resolve')
         .setDescription('Resolve a mod-contact channel.')
+        .addStringOption((opt) => opt
+          .setName('description')
+          .setDescription('Description to be added to listing in the mod contact log')
+          .setRequired(true))
+        .addChannelOption((opt) => opt
+          .setName('channel')
+          .setDescription('Channel to log the mod contact to')
+          .setRequired(true))
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
       async execute(interaction) {
@@ -238,7 +249,10 @@ module.exports = {
             });
           }
 
-          let sql = `SELECT mcc.id
+          const description = interaction.options.getString('description', true);
+          const channel = interaction.options.getChannel('channel', true);
+
+          let sql = `SELECT mcc.id, mcc.userId
                      FROM guild_data gd
                      JOIN mod_contact mc ON gd.id = mc.guildDataId
                      JOIN mod_contact_channels mcc ON mc.id = mcc.modContactId
@@ -257,6 +271,23 @@ module.exports = {
           // Update database to set mod-contact as resolved
           sql = 'UPDATE mod_contact_channels SET resolved=1, resolutionTime=UNIX_TIMESTAMP() WHERE id=?';
           await dbExecute(sql, [modContactExists.id]);
+
+          // I don't think any mod contact will go on for over 5000 messages
+          const log = await saveMessageLog(interaction.channel, interaction.id, 5000);
+
+          await tmp.file((err, tmpFilePath, fd, cleanupCallback) => {
+            fs.writeFile(tmpFilePath, log, () => {
+              return channel.send({
+                content: `<@${modContactExists.userId}> (\`${modContactExists.userId}\`) - ${description}`,
+                files: [
+                  {
+                    name: `${interaction.channel.name}-log.txt`,
+                    attachment: tmpFilePath,
+                  }
+                ],
+              });
+            });
+          });
 
           return interaction.channel.delete();
         } catch (e) {

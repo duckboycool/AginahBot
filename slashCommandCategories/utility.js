@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, InteractionContextType, MessageFlags, PermissionFlagsBits } = require('discord.js');
 const tmp = require('tmp');
 const fs = require('fs');
-const { dbExecute, dbQueryOne, managesThread, replyError, verifyModRole } = require('../lib');
+const { dbExecute, dbQueryOne, managesThread, replyError, saveMessageLog, verifyModRole } = require('../lib');
 
 module.exports = {
   category: 'Utility Commands',
@@ -19,10 +19,6 @@ module.exports = {
       async execute(interaction) {
         const limit = interaction.options.getInteger('limit') ?? 100;
 
-        // Control variables
-        const logs = [];
-        let lastMessageId = interaction.id;
-
         // Do not fetch more than 1000 messages from the Discord API
         if (limit < 1 || limit > 1000) {
           return interaction.reply({
@@ -35,49 +31,7 @@ module.exports = {
           // This might take a few seconds
           await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-          while (logs.length < limit) {
-            // Determine number of messages to be fetched this request
-            const fetchLimit = ((limit - logs.length) > 100) ? 100 : (limit - logs.length);
-
-            // Fetch messages from Discord API
-            const messages = await interaction.channel.messages.fetch({
-              before: lastMessageId,
-              limit: fetchLimit,
-            });
-
-            // Save relevant message data
-            messages.each((msg) => {
-              logs.push({
-                id: msg.id,
-                user: `${msg?.member?.displayName || msg.author.username}`,
-                timestamp: msg.createdTimestamp,
-                content: msg.content,
-              });
-            });
-
-            // If no more messages are available, stop fetching. Also guards against empty fetches to
-            // avoid reading logs[-1]
-            if (messages.size === 0) { break; }
-
-            // Begin fetching from the earliest message
-            lastMessageId = logs[logs.length - 1].id;
-
-            // If no more messages are available, stop fetching
-            if (messages.size < fetchLimit) { break; }
-
-            // Delay to avoid ratelimit
-            await new Promise((resolve) => setTimeout(resolve, 600));
-          }
-
-          // Reverse the array so the oldest messages occur first, and will therefore be printed earlier
-          // in the output file
-          logs.reverse();
-
-          // Build output file
-          let output = '';
-          logs.forEach((log) => {
-            output += `${log.user} (${new Date(log.timestamp).toUTCString()}):\n${log.content}\n\n`;
-          });
+          const output = await saveMessageLog(interaction.channel, interaction.id, limit);
 
           // Save the output to a temporary file and send it to the channel
           return tmp.file((err, tmpFilePath, fd, cleanupCallback) => {
