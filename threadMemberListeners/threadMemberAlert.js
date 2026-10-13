@@ -12,7 +12,8 @@ module.exports = async (client, addedMembers, removedMembers) => {
   }
 
   const thread = newMember.thread;
-  if (thread.memberCount <= ALERT_CUTOFF) {
+  // Skip locked threads, and maybe it's good to not mark them so they could alert if they get unlocked?
+  if (thread.memberCount <= ALERT_CUTOFF || thread.locked) {
     return;
   }
 
