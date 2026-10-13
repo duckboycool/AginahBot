@@ -111,7 +111,7 @@ module.exports = {
         .setName('pin')
         .setDescription('Pin a message in this channel.')
         .addStringOption((opt) => opt
-          .setName('message')
+          .setName('message-id')
           .setDescription('The ID of or link to the message to pin.')
           .setMaxLength(512)
           .setRequired(true))
@@ -125,10 +125,17 @@ module.exports = {
           });
         }
 
-        let messageId = interaction.options.getString('message');
-        if (/.*discord.*\/\d+$/.test(messageId)) {
-          const output = messageId.match(/.*discord.*\/(\d+)$/);
-          messageId = output[1];
+        let messageId = interaction.options.getString('message-id');
+        const linkMatch = messageId.match(/.*discord.*\/(\d+)$/);
+        if (linkMatch) {
+          messageId = linkMatch[1];
+        }
+
+        if (!/^\d+$/.test(messageId)) {
+          return interaction.reply({
+            content: 'Invalid message ID.',
+            flags: MessageFlags.Ephemeral,
+          });
         }
 
         const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guild.id]);
@@ -177,7 +184,7 @@ module.exports = {
         .setName('unpin')
         .setDescription('Unpin a message in this channel.')
         .addStringOption((opt) => opt
-          .setName('message')
+          .setName('message-id')
           .setDescription('The ID of or link to the message to unpin.')
           .setMaxLength(512)
           .setRequired(true))
@@ -191,10 +198,17 @@ module.exports = {
           });
         }
 
-        let messageId = interaction.options.getString('message');
-        if (/.*discord.*\/\d+$/.test(messageId)) {
-          const output = messageId.match(/.*discord.*\/(\d+)$/);
-          messageId = output[1];
+        let messageId = interaction.options.getString('message-id');
+        const linkMatch = messageId.match(/.*discord.*\/(\d+)$/);
+        if (linkMatch) {
+          messageId = linkMatch[1];
+        }
+
+        if (!/^\d+$/.test(messageId)) {
+          return interaction.reply({
+            content: 'Invalid message ID.',
+            flags: MessageFlags.Ephemeral,
+          });
         }
 
         const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guild.id]);
