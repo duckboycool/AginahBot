@@ -12,15 +12,15 @@ module.exports = {
         .setDescription('Save a log of recent channel messages to a text file.')
         .addIntegerOption((opt) => opt
           .setName('limit')
-          .setDescription('Number of messages to save. Min 1, max 1000, default 100')
+          .setDescription('Number of messages to save. Min 1, max 5000, default 100')
           .setRequired(false))
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
       async execute(interaction) {
         const limit = interaction.options.getInteger('limit') ?? 100;
 
-        // Do not fetch more than 1000 messages from the Discord API
-        if (limit < 1 || limit > 1000) {
+        // Do not fetch more than 5000 messages from the Discord API
+        if (limit < 1 || limit > 5000) {
           return interaction.reply({
             content: 'Limit argument must be an integer from 1 to 1000.',
             flags: MessageFlags.Ephemeral,
