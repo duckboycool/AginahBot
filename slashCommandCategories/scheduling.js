@@ -2,7 +2,7 @@ const Discord = require('discord.js');
 const { SlashCommandBuilder, InteractionContextType, MessageFlags, PermissionFlagsBits, ButtonBuilder, ButtonStyle,
   ActionRowBuilder } = require('discord.js');
 const { generalErrorHandler } = require('../errorHandlers');
-const { dbQueryOne, dbQueryAll, dbExecute, updateScheduleBoard, verifyModRole, verifyChannelPermissions,
+const { dbQueryOne, dbQueryAll, dbExecute, updateScheduleBoards, verifyModRole, verifyChannelPermissions,
   formatPermissionList, replyError } = require('../lib');
 const forbiddenWords = require('../assets/forbiddenWords.json');
 
@@ -164,7 +164,7 @@ const sendScheduleMessage = async (interaction, targetDate, title = null, pingRo
     threadChannel ? threadChannel.id : null, interaction.user.id, eventCode, title, duration || null]);
 
   // Update schedule messages
-  await updateScheduleBoard(interaction.client, interaction.guild);
+  await updateScheduleBoards(interaction.client, interaction.guild);
 };
 
 module.exports = {
@@ -640,7 +640,7 @@ module.exports = {
         if (message.content) { payload.content = message.content; }
         await message.edit(payload);
 
-        await updateScheduleBoard(interaction.client, interaction.guild);
+        await updateScheduleBoards(interaction.client, interaction.guild);
         return interaction.followUp(
           `Event **${eventData.title || eventCode}** updated to <t:${Math.floor(newTimestamp/1000)}:F>`
         );
@@ -741,7 +741,7 @@ module.exports = {
           // Remove the event's entry from the database
           await dbExecute('DELETE FROM scheduled_events WHERE id=?', [eventData.id]);
 
-          await updateScheduleBoard(interaction.client, interaction.guild);
+          await updateScheduleBoards(interaction.client, interaction.guild);
           return interaction.followUp(`Event with code ${eventCode.toUpperCase()} has been cancelled.`);
         } catch(e) {
           return interaction.followUp(replyError('Something went wrong and the event could not be cancelled.\n'));
@@ -820,7 +820,7 @@ module.exports = {
           await scheduleBoardMessage.pin();
           sql = 'INSERT INTO schedule_boards (guildDataId, channelId, messageId) VALUES(?, ?, ?)';
           await dbExecute(sql, [guildData.id, interaction.channel.id, scheduleBoardMessage.id]);
-          await updateScheduleBoard(interaction.client, interaction.guild);
+          await updateScheduleBoards(interaction.client, interaction.guild);
           return interaction.followUp('Schedule board created.');
         } catch (e) {
           return interaction.followUp(replyError('Something went wrong and the schedule board could not be created.\n'));

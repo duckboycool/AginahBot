@@ -495,177 +495,21 @@ module.exports = {
   },
 
   /**
-   *
+   * Update schedule boards across all guilds, or in a specific guild if given
    * @param client {Client}
    * @param guild {Guild}
-   * @returns {Promise<void>}
    */
-  updateScheduleBoard: async (client, guild) => {
-    // Find all schedule boards
-    let sql = `SELECT sb.id, gd.id AS guildId, sb.channelId, sb.messageId
-               FROM schedule_boards sb
-               JOIN guild_data gd ON sb.guildDataId = gd.id
-               WHERE gd.guildId=?`;
-    const boards = await module.exports.dbQueryAll(sql, [guild.id]);
-
-    for (let board of boards) {
-      // Find board channel, clean database if channel has been deleted
-      const boardChannel = await guild.channels.fetch(board.channelId);
-      if (!boardChannel) {
-        await module.exports.dbExecute('DELETE FROM schedule_boards WHERE id=?', [board.id]);
-        continue;
-      }
-
-      const boardPermissionCheck = module.exports.verifyChannelPermissions(boardChannel, [
-        PermissionFlagsBits.ViewChannel,
-        PermissionFlagsBits.ReadMessageHistory,
-        PermissionFlagsBits.SendMessages,
-        PermissionFlagsBits.EmbedLinks,
-      ]);
-      if (!boardPermissionCheck.ok) {
-        console.warn(`Skipping schedule board ${board.id} in guild ${guild.id}: missing permissions in ` +
-          `#${boardChannel.name} (${boardChannel.id}): ` +
-          `${module.exports.formatPermissionList(boardPermissionCheck.missingPermissions)}.`);
-        continue;
-      }
-
-      // Find board message, clean database if message has been deleted
-      const boardMessage = await boardChannel.messages.fetch(board.messageId);
-      if (!boardMessage) {
-        await module.exports.dbExecute('DELETE FROM schedule_boards WHERE id=?', [board.id]);
-        continue;
-      }
-
-      sql = `SELECT se.id, se.timestamp, se.schedulingUserId, se.channelId, se.messageId, se.threadId, se.eventCode,
-                se.title, se.duration
-             FROM scheduled_events se
-             JOIN guild_data gd ON se.guildDataId = gd.id
-             WHERE gd.guildId=?
-                 AND se.timestamp > ?
-             ORDER BY se.timestamp
-             LIMIT 10`;
-      const events = await module.exports.dbQueryAll(sql, [guild.id, new Date().getTime()]);
-
-      // If there are no scheduled events for this guild, continue to the next schedule board
-      if (events.length === 0) {
-        return boardMessage.edit({ content: 'There are no upcoming events.', embeds: [] });
-      }
-
-      sql = `SELECT COUNT(*) AS count
-             FROM scheduled_events se
-             JOIN guild_data gd ON se.guildDataId = gd.id
-             WHERE gd.guildId=?
-                 AND se.timestamp > ?
-             ORDER BY se.timestamp
-             LIMIT 10`;
-      const countResult = await module.exports.dbQueryOne(sql, [guild.id, new Date().getTime()]);
-
-      // Embeds which will be PUT to the schedule board message
-      const embeds = [];
-
-      const embedColors = [
-        '3498DB',  // Light Blue
-        '2ECC71',  // Green
-        'E67E22',  // Orange
-        'E74C3C',  // Light Red (Rose)
-        '34495E',  // Navy
-        '8B0000',  // Dark Red (Maroon)
-        '8A2BE2',  // Purple
-        '008080',  // Teal
-        'DDA0DD',  // Plum
-        '808000'   // Olive
-      ];
-
-      for (let event of events) {
-        let eventChannel = null;
-        let eventMessage = null;
-        try {
-          eventChannel = await guild.channels.fetch(event.channelId);
-          eventMessage = await eventChannel.messages.fetch(event.messageId);
-
-        } catch (err) {
-          if (err.status !== 404) {
-            throw err;
-          }
-
-          // If the channel or message is gone, remove this event from the table
-          await module.exports.dbExecute('DELETE FROM scheduled_events WHERE id=?', [event.id]);
-          continue;
-        }
-
-        let schedulingUser = null;
-        try {
-          schedulingUser = await guild.members.fetch(event.schedulingUserId);
-        } catch (err) {
-          if (err.status !== 404) {
-            throw err;
-          }
-
-          // If we have a 404 here, it means the user is no longer a member of the guild. In these instances,
-          // no information about the user will be included in the embed
-        }
-
-        let eventThread = null;
-        try {
-          eventThread = event.threadId ? await guild.channels.fetch(event.threadId) : null;
-        } catch (err) {
-          if (err.status !== 404) {
-            throw err;
-          }
-
-          // It's possible for a thread to have been deleted. In these cases, we remove the thread from the table
-          await module.exports.dbExecute('UPDATE scheduled_events SET threadId=NULL WHERE id=?', [event.id]);
-        }
-
-        // Determine RSVP count
-        const rsvpCount = await module.exports.dbQueryOne(
-          'SELECT COUNT(*) AS count FROM event_rsvp WHERE eventId=?',
-          [event.id]
-        );
-
-        const embed = new EmbedBuilder()
-          .setTitle(`${event.title || 'Upcoming Event'}`)
-          .setDescription(
-            `Starts <t:${Math.floor(event.timestamp / 1000)}:R> and should last` +
-            `${event.duration ? ` about ${event.duration} hours` : ' an undisclosed amount of time'}`
-          )
-          .setColor(`#${embedColors.pop()}`)
-          .setAuthor({ name: schedulingUser?.displayName || 'Unknown User' })
-          .setURL(eventMessage.url)
-          .setThumbnail(schedulingUser.displayAvatarURL())
-          .addFields(
-            { name: 'Date/Time', value: `<t:${Math.floor(event.timestamp / 1000)}:F>`, inline: true },
-            { name: ' ', value: ' ', inline: true },
-            {
-              name: 'Planning Channel',
-              value: eventThread ? `[#${eventChannel.name}](${eventThread.url})` : `#${eventChannel.name}`,
-              inline: true,
-            },
-            { name: 'Event Code', value: event.eventCode, inline: true },
-            { name: ' ', value: ' ', inline: true },
-            { name: 'Current RSVPs', value: rsvpCount.count.toString(), inline: true },
-          );
-        embeds.push(embed);
-      }
-
-      // Update the schedule board
-      await boardMessage.edit({
-        content: (countResult.count > 10) ? '# Next 10 Upcoming Events' : '# Upcoming Events',
-        embeds
-      });
-    }
-  },
-
-  /**
-   * Update all schedule boards across all guilds
-   * @param client {Client}
-   */
-  updateScheduleBoards: async (client) => {
+  updateScheduleBoards: async (client, guild = null) => {
     // Find all schedule boards
     let sql = `SELECT sb.id, gd.guildId AS guildId, sb.channelId, sb.messageId
                FROM schedule_boards sb
                JOIN guild_data gd ON sb.guildDataId = gd.id`;
-    const boards = await module.exports.dbQueryAll(sql);
+
+    if (guild) {
+      sql += ' WHERE gd.guildId=?';
+    }
+
+    const boards = await module.exports.dbQueryAll(sql, guild ? [guild.id] : []);
 
     for (let board of boards) {
       // Fetch updated data for this guild
