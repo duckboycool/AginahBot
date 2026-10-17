@@ -1,4 +1,4 @@
-const { modContactEnabled, modContactExists } = require('../slashCommandCategories/modContact');
+const { modContactEnabled, fetchModContact } = require('../slashCommandCategories/modContact');
 const { ModalBuilder, ActionRowBuilder, TextInputBuilder, TextInputStyle, MessageFlags } = require('discord.js');
 const { dbExecute } = require('../lib');
 
@@ -17,26 +17,12 @@ module.exports = async (client, interaction) => {
   }
 
   // Check if the DB believes a mod-contact exists for this user already
-  const existingChannelId = await modContactExists(interaction.guild, interaction.member);
-  if (existingChannelId) {
-    try {
-      // Attempt to fetch this channel from the Discord API and inform the user a mod-contact already exists
-      const existingChannel = await interaction.guild.channels.fetch(existingChannelId);
- 
-      return interaction.reply({
-        content: `You already have a mod-contact open here: ${existingChannel}`,
-        flags: MessageFlags.Ephemeral,
-      });
-    } catch (e) {
-      // The database claims this channel exists, but the Discord API disagrees. Set this mod contact as
-      // resolved and allow the system to open a new one. This can happen if a mod-contact user channel
-      // is manually deleted, or if Discord is just having a bad day
-      let sql = `UPDATE mod_contact_channels
-                 SET resolved=1, resolutionTime=UNIX_TIMESTAMP()
-                 WHERE userId=?
-                   AND reportChannelId=?`;
-      await dbExecute(sql, [interaction.user.id, existingChannelId]);
-    }
+  const existingChannel = await fetchModContact(interaction.guild, interaction.member);
+  if (existingChannel) {
+    return interaction.reply({
+      content: `You already have a mod-contact open here: ${existingChannel}`,
+      flags: MessageFlags.Ephemeral,
+    });
   }
 
   // Show the modal prompting for details about the reason for contact

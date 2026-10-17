@@ -190,25 +190,12 @@ module.exports = {
           }
 
           // Check if the DB believes a mod-contact exists for this user already
-          const existingChannelId = await module.exports.modContactExists(interaction.guild, user);
-          if (existingChannelId) {
-            try {
-              // Attempt to fetch this channel from the Discord API and inform the user a mod-contact already exists
-              const existingChannel = await interaction.guild.channels.fetch(existingChannelId);
-              return interaction.followUp({
-                content: `A mod-contact is already open for this user: ${existingChannel}`,
-                flags: MessageFlags.Ephemeral,
-              });
-            } catch (e) {
-              // The database claims this channel exists, but the Discord API disagrees. Set this mod contact as
-              // resolved and allow the system to open a new one. This can happen if a mod-contact user channel
-              // is manually deleted, or if Discord is just having a bad day
-              let sql = `UPDATE mod_contact_channels
-                         SET resolved=1, resolutionTime=UNIX_TIMESTAMP()
-                         WHERE userId=?
-                           AND reportChannelId=?`;
-              await dbExecute(sql, [user.id, existingChannelId]);
-            }
+          const existingChannel = await module.exports.fetchModContact(interaction.guild, user);
+          if (existingChannel) {
+            return interaction.followUp({
+              content: `A mod-contact is already open for this user: ${existingChannel}`,
+              flags: MessageFlags.Ephemeral,
+            });
           }
 
           // Create the mod-contact channel
@@ -313,11 +300,11 @@ module.exports = {
   },
 
   /**
-   * Check if a mod-contact exists for a specified user. Resolves to the channelId in the specified guild if
-   * a mod contact already exists
+   * Check if DB thinks a mod-contact exists for a specified user. Resolves to the channelId in the specified guild if
+   * one is present
    * @param guild {Guild}
    * @param guildMember {GuildMember}
-   * @returns {Promise<TextChannel|null>}
+   * @returns {Promise<String|null>}
    */
   modContactExists: async (guild, guildMember) => {
     // If a channel already exists for this user, inform them
@@ -330,6 +317,36 @@ module.exports = {
                   AND mcc.resolved=0`;
     const existing = await dbQueryOne(sql, [ guild.id, guildMember.id ]);
     return existing?.reportChannelId || null;
+  },
+
+  /**
+   * Check if mod contact exists for member according to discord. Resolves to channel object if one is present, and
+   * automatically removes entry from the DB if it is out of sync
+   * @param guild {Guild}
+   * @param guildMember {GuildMember}
+   * @returns {Promise<TextChannel|null>}
+   */
+  fetchModContact: async (guild, guildMember) => {
+    const channelId = await module.exports.modContactExists(guild, guildMember);
+
+    if (channelId) {
+      try {
+        // Attempt to fetch this channel from the Discord API
+        return await guild.channels.fetch(channelId);
+      } catch (e) {
+        // The database claims this channel exists, but the Discord API disagrees. Set this mod contact as
+        // resolved and allow the system to open a new one. This can happen if a mod-contact user channel
+        // is manually deleted, or if Discord is just having a bad day
+        let sql = `UPDATE mod_contact_channels
+                   SET resolved=1, resolutionTime=UNIX_TIMESTAMP()
+                   WHERE userId=?
+                     AND reportChannelId=?`;
+        await dbExecute(sql, [guildMember.id, channelId]);
+        return null;
+      }
+    }
+
+    return null;
   },
 
   /**
