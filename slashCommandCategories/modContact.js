@@ -262,21 +262,31 @@ module.exports = {
           // I don't think any mod contact will go on for over 5000 messages
           const log = await saveMessageLog(interaction.channel, interaction.id, 5000);
 
-          await tmp.file((err, tmpFilePath, fd, cleanupCallback) => {
-            fs.writeFile(tmpFilePath, log, () => {
-              return channel.send({
-                content: `<@${modContactExists.userId}> (\`${modContactExists.userId}\`) - ${description}`,
-                files: [
-                  {
-                    name: `${interaction.channel.name}-log.txt`,
-                    attachment: tmpFilePath,
-                  }
-                ],
-              });
+          tmp.file((err, tmpFilePath, fd, cleanupCallback) => {
+            fs.writeFile(tmpFilePath, log, async () => {
+              try {
+                await channel.send({
+                  content: `<@${modContactExists.userId}> (\`${modContactExists.userId}\`) - ${description}`,
+                  files: [
+                    {
+                      name: `${interaction.channel.name}-log.txt`,
+                      attachment: tmpFilePath,
+                    }
+                  ],
+                });
+
+                await interaction.channel.delete();
+              } catch (err) {
+                console.error('Couldn\'t send contact log');
+                console.error(err);
+
+                return interaction.reply({
+                  content: 'Could not save mod contact log to given channel, aborting.',
+                  flags: MessageFlags.Ephemeral,
+                });
+              }
             });
           });
-
-          return interaction.channel.delete();
         } catch (e) {
           return interaction.followUp(
             replyError('Something went wrong and the Mod Contact feature could not be enabled on this server.\n')
