@@ -35,7 +35,7 @@ module.exports = {
         // Default settings
         let race = '0';
         let hintCost = '10';
-        let forfeitMode = 'auto';
+        let releaseMode = 'auto';
         let remainingMode = 'disabled';
         let collectMode = 'goal';
 
@@ -48,7 +48,7 @@ module.exports = {
           case 'tournament':
             race = '1';
             hintCost = '101';
-            forfeitMode = 'disabled';
+            releaseMode = 'disabled';
             remainingMode = 'disabled';
             collectMode = 'disabled';
             break;
@@ -63,7 +63,7 @@ module.exports = {
             const formData = new FormData();
             formData.append('file', fs.createReadStream(tempFile.name), tempFile.name);
             formData.append('hint_cost', hintCost);
-            formData.append('forfeit_mode', forfeitMode);
+            formData.append('release_mode', releaseMode);
             formData.append('remaining_mode', remainingMode);
             formData.append('collect_mode', collectMode);
             formData.append('race', race);

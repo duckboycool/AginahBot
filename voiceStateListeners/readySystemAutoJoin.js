@@ -1,4 +1,4 @@
-const {dbQueryOne, dbQueryAll, dbExecute} = require('../database');
+const { dbQueryOne, dbExecute } = require('../lib');
 
 module.exports = async (client, oldState, newState) => {
   // If the user changed their voice state but remained in the same channel, do nothing (mute, deafen, etc.)
@@ -8,7 +8,7 @@ module.exports = async (client, oldState, newState) => {
   if (newState?.channel?.id && newState?.member?.voice?.channelId) {
     // Find ready system
     const readySystem = await dbQueryOne(
-      'SELECT id FROM readySystems rs WHERE guildId=? AND channelId=?',
+      'SELECT rs.id FROM ready_systems rs JOIN guild_data gd ON gd.id=rs.guildDataId WHERE guildId=? AND channelId=?',
       [newState.guild.id, newState.channel.id]
     );
 
@@ -16,14 +16,14 @@ module.exports = async (client, oldState, newState) => {
       return;
     }
 
-    const alreadyJoined = await dbQueryAll(
-      'SELECT 1 FROM readyChecks WHERE readySystemId=? AND userId=?',
+    const alreadyJoined = await dbQueryOne(
+      'SELECT 1 FROM ready_checks WHERE readySystemId=? AND userId=?',
       [readySystem.id, newState.member.id]
     );
 
     if (!alreadyJoined) {
       await dbExecute(
-        'REPLACE INTO readyChecks (readySystemId, userId, isReady) VALUES (?, ?, 0)',
+        'REPLACE INTO ready_checks (readySystemId, userId, isReady) VALUES (?, ?, 0)',
         [readySystem.id, newState.member.id]
       );
 
@@ -38,7 +38,7 @@ module.exports = async (client, oldState, newState) => {
   if (oldState?.channel?.id) {
     // Find ready system
     const readySystem = await dbQueryOne(
-      'SELECT id FROM readySystems rs WHERE guildId=? AND channelId=?',
+      'SELECT rs.id FROM ready_systems rs JOIN guild_data gd ON gd.id=rs.guildDataId WHERE guildId=? AND channelId=?',
       [oldState.guild.id, oldState.channel.id]
     );
 
@@ -46,14 +46,14 @@ module.exports = async (client, oldState, newState) => {
       return;
     }
 
-    const wasJoined = await dbQueryAll(
-      'SELECT 1 FROM readyChecks WHERE readySystemId=? AND userId=?',
+    const wasJoined = await dbQueryOne(
+      'SELECT 1 FROM ready_checks WHERE readySystemId=? AND userId=?',
       [readySystem.id, oldState.member.id]
     );
 
     if (wasJoined) {
       await dbExecute(
-        'DELETE FROM readyChecks WHERE readySystemId=? AND userId=?',
+        'DELETE FROM ready_checks WHERE readySystemId=? AND userId=?',
         [readySystem.id, oldState.member.id]
       );
 

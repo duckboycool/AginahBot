@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, InteractionContextType } = require('discord.js');
-const { dbExecute, dbQueryOne, dbQueryAll } = require('../database');
-const { verifyIsAdmin } = require('../lib');
+const { dbExecute, dbQueryOne, dbQueryAll, replyError, verifyIsAdmin } = require('../lib');
 
 module.exports = {
   category: 'Ready System',
@@ -11,9 +10,19 @@ module.exports = {
         .setDescription('Create a ready system in this channel.')
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
+        const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guild.id]);
+        if (!guildData) {
+          return interaction.reply({
+            content: replyError('Unable to process request. No guild data exists for this guild. '),
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         // Determine if a game is already running in this channel
-        let sql = 'SELECT 1 FROM readySystems WHERE guildId=? AND channelId=?';
-        const existingGame = await dbQueryOne(sql, [interaction.guild.id, interaction.channel.id]);
+        const existingGame = await dbQueryOne(
+          'SELECT 1 FROM ready_systems WHERE guildDataId=? AND channelId=?',
+          [guildData.id, interaction.channel.id]
+        );
         if (existingGame) {
           return interaction.reply({
             content: 'A ready system has already been created in this channel.',
@@ -23,14 +32,15 @@ module.exports = {
 
         // Create the game in this channel
         await dbQueryOne(
-          'INSERT INTO readySystems (guildId, channelId, userId) VALUES (?, ?, ?)',
-          [interaction.guild.id, interaction.channel.id, interaction.user.id],
+          'INSERT INTO ready_systems (guildDataId, channelId, userId) VALUES (?, ?, ?)',
+          [guildData.id, interaction.channel.id, interaction.user.id],
         );
         return interaction.reply({
-          content: 'A ready system has created in this channel.\n' +
+          content: 'A ready system has been created in this channel.\n' +
             '- `/ready-join` to join the game\n' +
             '- `/ready` to indicate you are ready to begin\n' +
             '- `/unready` to indicate you are no longer ready to begin\n' +
+            '- `/ready-check` to check status of users in the ready system\n' +
             '- `/ready-cancel` to delete the ready system'
         });
       }
@@ -41,10 +51,18 @@ module.exports = {
         .setDescription('Join a ready system in this channel.')
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
+        const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guild.id]);
+        if (!guildData) {
+          return interaction.reply({
+            content: replyError('Unable to process request. No guild data exists for this guild. '),
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         // Find ready system for this channel
         const readySystem = await dbQueryOne(
-          'SELECT id FROM readySystems WHERE guildId=? AND channelId=?',
-          [interaction.guild.id, interaction.channel.id],
+          'SELECT id FROM ready_systems WHERE guildDataId=? AND channelId=?',
+          [guildData.id, interaction.channel.id],
         );
 
         // Inform the user if there is no ready system
@@ -57,7 +75,7 @@ module.exports = {
 
         // Add the user to the ready system
         await dbExecute(
-          'REPLACE INTO readyChecks (readySystemId, userId) VALUES (?,?)',
+          'REPLACE INTO ready_checks (readySystemId, userId) VALUES (?, ?)',
           [readySystem.id, interaction.user.id],
         );
 
@@ -72,10 +90,18 @@ module.exports = {
         .setDescription('Leave a ready system in this channel.')
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
+        const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guild.id]);
+        if (!guildData) {
+          return interaction.reply({
+            content: replyError('Unable to process request. No guild data exists for this guild. '),
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         // Find ready system for this channel
         const readySystem = await dbQueryOne(
-          'SELECT id FROM readySystems WHERE guildId=? AND channelId=?',
-          [interaction.guild.id, interaction.channel.id],
+          'SELECT id FROM ready_systems WHERE guildDataId=? AND channelId=?',
+          [guildData.id, interaction.channel.id],
         );
 
         // Inform the user if there is no ready system
@@ -88,7 +114,7 @@ module.exports = {
 
         // Remove the user from the ready system
         await dbExecute(
-          'DELETE FROM readyChecks WHERE readySystemId=? AND userId=?',
+          'DELETE FROM ready_checks WHERE readySystemId=? AND userId=?',
           [readySystem.id, interaction.user.id],
         );
 
@@ -103,10 +129,18 @@ module.exports = {
         .setDescription('Indicate you are ready to begin.')
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
+        const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guild.id]);
+        if (!guildData) {
+          return interaction.reply({
+            content: replyError('Unable to process request. No guild data exists for this guild. '),
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         // Find ready system for this channel
         const readySystem = await dbQueryOne(
-          'SELECT id FROM readySystems WHERE guildId=? AND channelId=?',
-          [interaction.guild.id, interaction.channel.id],
+          'SELECT id FROM ready_systems WHERE guildDataId=? AND channelId=?',
+          [guildData.id, interaction.channel.id],
         );
 
         // Inform the user if there is no ready system
@@ -118,19 +152,19 @@ module.exports = {
         }
 
         const isJoined = await dbQueryOne(
-          'SELECT 1 FROM readyChecks WHERE readySystemId=? AND userId=?',
+          'SELECT 1 FROM ready_checks WHERE readySystemId=? AND userId=?',
           [readySystem.id, interaction.user.id],
         );
 
         if (!isJoined) {
           await dbExecute(
-            'REPLACE INTO readyChecks (readySystemId, userId, isReady) VALUES (?, ?, 1)',
+            'REPLACE INTO ready_checks (readySystemId, userId, isReady) VALUES (?, ?, 1)',
             [readySystem.id, interaction.user.id]
           );
         }
 
         await dbExecute(
-          'UPDATE readyChecks SET isReady=1 WHERE readySystemId=? AND userId=?',
+          'UPDATE ready_checks SET isReady=1 WHERE readySystemId=? AND userId=?',
           [readySystem.id, interaction.member.id],
         );
 
@@ -139,7 +173,7 @@ module.exports = {
         });
 
         const unreadyPlayers = await dbQueryOne(
-          'SELECT 1 FROM readyChecks WHERE readySystemId=? AND NOT isReady',
+          'SELECT 1 FROM ready_checks WHERE readySystemId=? AND NOT isReady',
           [readySystem.id],
         );
 
@@ -154,10 +188,18 @@ module.exports = {
         .setDescription('Indicate you are no longer ready to begin.')
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
+        const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guild.id]);
+        if (!guildData) {
+          return interaction.reply({
+            content: replyError('Unable to process request. No guild data exists for this guild. '),
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         // Find ready system for this channel
         const readySystem = await dbQueryOne(
-          'SELECT id FROM readySystems WHERE guildId=? AND channelId=?',
-          [interaction.guild.id, interaction.channel.id],
+          'SELECT id FROM ready_systems WHERE guildDataId=? AND channelId=?',
+          [guildData.id, interaction.channel.id],
         );
 
         // Inform the user if there is no ready system
@@ -169,7 +211,7 @@ module.exports = {
         }
 
         const isJoined = await dbQueryOne(
-          'SELECT 1 FROM readyChecks WHERE readySystemId=? AND userId=?',
+          'SELECT 1 FROM ready_checks WHERE readySystemId=? AND userId=?',
           [readySystem.id, interaction.user.id],
         );
 
@@ -181,7 +223,7 @@ module.exports = {
         }
 
         await dbExecute(
-          'UPDATE readyChecks SET isReady=0 WHERE readySystemId=? AND userId=?',
+          'UPDATE ready_checks SET isReady=0 WHERE readySystemId=? AND userId=?',
           [readySystem.id, interaction.member.id],
         );
 
@@ -196,10 +238,18 @@ module.exports = {
         .setDescription('Cancel the ready system in this channel if one is present.')
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
+        const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guild.id]);
+        if (!guildData) {
+          return interaction.reply({
+            content: replyError('Unable to process request. No guild data exists for this guild. '),
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         // Find ready system for this channel
         const readySystem = await dbQueryOne(
-          'SELECT id, userId FROM readySystems WHERE guildId=? AND channelId=?',
-          [interaction.guild.id, interaction.channel.id],
+          'SELECT id, userId FROM ready_systems WHERE guildDataId=? AND channelId=?',
+          [guildData.id, interaction.channel.id],
         );
 
         // Inform the user if there is no ready system
@@ -223,8 +273,8 @@ module.exports = {
           });
         }
 
-        await dbExecute('DELETE FROM readyChecks WHERE readySystemId=?', readySystem.id);
-        await dbExecute('DELETE FROM readySystems WHERE id=?', [readySystem.id]);
+        await dbExecute('DELETE FROM ready_checks WHERE readySystemId=?', [readySystem.id]);
+        await dbExecute('DELETE FROM ready_systems WHERE id=?', [readySystem.id]);
 
         return interaction.reply({
           content: `${interaction.user} has cancelled the ready system.`,
@@ -234,13 +284,21 @@ module.exports = {
     {
       commandBuilder: new SlashCommandBuilder()
         .setName('ready-check')
-        .setDescription('Cancel the ready system in this channel if one is present.')
+        .setDescription('Check which members in the ready system are ready.')
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
+        const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guild.id]);
+        if (!guildData) {
+          return interaction.reply({
+            content: replyError('Unable to process request. No guild data exists for this guild. '),
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         // Find ready system for this channel
         const readySystem = await dbQueryOne(
-          'SELECT id FROM readySystems WHERE guildId=? AND channelId=?',
-          [interaction.guild.id, interaction.channel.id],
+          'SELECT id FROM ready_systems WHERE guildDataId=? AND channelId=?',
+          [guildData.id, interaction.channel.id],
         );
 
         // Inform the user if there is no ready system
@@ -252,7 +310,7 @@ module.exports = {
         }
 
         const players = await dbQueryAll(
-          'SELECT userId, isReady FROM readyChecks WHERE readySystemId=?',
+          'SELECT userId, isReady FROM ready_checks WHERE readySystemId=?',
           [readySystem.id],
         );
 

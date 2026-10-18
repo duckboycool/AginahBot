@@ -152,6 +152,22 @@ const apworldAlaises = `CREATE TABLE IF NOT EXISTS apworld_aliases (
     alias VARCHAR(255) NOT NULL
 )`;
 
+// From ArchipelaBot, probably will be removed eventually
+const readySystems = `CREATE TABLE IF NOT EXISTS ready_systems (
+    id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    guildDataId BIGINT NOT NULL,
+    channelId VARCHAR(64) NOT NULL,
+    userId VARCHAR(64) NOT NULL,
+    UNIQUE (guildDataId, channelId)
+)`;
+
+const readyChecks = `CREATE TABLE IF NOT EXISTS ready_checks (
+    id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    readySystemId BIGINT NOT NULL,
+    userId VARCHAR(64) NOT NULL,
+    isReady TINYINT(1) NOT NULL DEFAULT 0,
+    UNIQUE (readySystemId, userId)
+)`;
 
 const db = mysql.createConnection({
   host: config.dbHost,
@@ -183,4 +199,6 @@ db.query(pinnedForumPosts, handler);
 db.query(scheduleBoards, handler);
 db.query(apworldInfo, handler);
 db.query(apworldAlaises, handler);
+db.query(readySystems, handler);
+db.query(readyChecks, handler);
 db.end();

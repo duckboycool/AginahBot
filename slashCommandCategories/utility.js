@@ -188,7 +188,7 @@ module.exports = {
     {
       commandBuilder: new SlashCommandBuilder()
         .setName('set-alerts-channel')
-        .setDescription('Change channel to put spam reports in.')
+        .setDescription('Change channel to put spam/piracy reports in.')
         .addChannelOption((opt) => opt
           .setName('channel')
           .setDescription('New channel to set')
