@@ -22,9 +22,9 @@ module.exports = async (client, addedMembers, removedMembers) => {
   if (alerted) {
     return;
   }
-
-  await dbExecute('INSERT INTO alerted_threads (threadId) VALUES (?)', [thread.id]);
-
+  
   const moderator = await getModRole(thread.guild) ?? await getLeadModRole(thread.guild);
   await thread.send(`Adding ${moderator}s to this thread as it is approaching the member cap.`);
+
+  await dbExecute('INSERT INTO alerted_threads (threadId) VALUES (?)', [thread.id]);
 };
