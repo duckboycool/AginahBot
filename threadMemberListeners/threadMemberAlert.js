@@ -1,4 +1,4 @@
-const { dbExecute, dbQueryOne, getModRole } = require('../lib');
+const { dbExecute, dbQueryOne, getModRole, getLeadModRole } = require('../lib');
 
 const ALERT_CUTOFF = 900;
 
@@ -25,6 +25,6 @@ module.exports = async (client, addedMembers, removedMembers) => {
 
   await dbExecute('INSERT INTO alerted_threads (threadId) VALUES (?)', [thread.id]);
 
-  const moderator = await getModRole(thread.guild);
+  const moderator = await getModRole(thread.guild) ?? await getLeadModRole(thread.guild);
   await thread.send(`Adding ${moderator}s to this thread as it is approaching the member cap.`);
 };

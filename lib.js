@@ -163,9 +163,9 @@ module.exports = {
 
   // Function which returns a promise which will resolve to true or false
   verifyModRole: (guildMember) => new Promise(async (resolve) => {
-    if (module.exports.verifyLeadModRole(guildMember)) { resolve(true); }
+    if (await module.exports.verifyLeadModRole(guildMember)) { resolve(true); }
     const moderatorRole = await module.exports.getModRole(guildMember.guild);
-    resolve(guildMember.roles.cache.has(moderatorRole.id));
+    resolve(guildMember.roles.cache.has(moderatorRole?.id));
   }),
 
   verifyLeadModRole: (guildMember) => new Promise(async (resolve) => {
