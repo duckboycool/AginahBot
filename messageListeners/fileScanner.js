@@ -142,8 +142,6 @@ module.exports = async (client, message) => {
       return;
     }
 
-    const moderator = await getModRole(message.guild) ?? await getLeadModRole(message.guild);
-
     const sql = `SELECT go.alertsChannelId
                  FROM guild_options go
                  JOIN guild_data gd ON go.guildDataId = gd.id
@@ -159,6 +157,8 @@ module.exports = async (client, message) => {
     });
 
     if (romFileNames.length > 0) {
+      const moderator = await getModRole(message.guild) ?? await getLeadModRole(message.guild);
+
       await message.channel.send({
         content: `${message.author}: Do not post links to ROM files or other copyrighted content.\n` +
           `The ${moderator} team has been alerted to this incident.\n` +
