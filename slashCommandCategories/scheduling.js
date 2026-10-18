@@ -376,14 +376,14 @@ module.exports = {
         const timeString = interaction.options.getString('time');
         const utcOffset = interaction.options.getInteger('timezone');
 
-        if (!(new RegExp(/\d{4}-\d{2}-\d{2}/).test(dateString))) {
+        if (!(new RegExp(/^\d{4}-\d{2}-\d{2}$/).test(dateString))) {
           return interaction.followUp({
             content: 'Invalid date format provided. Must be of format: YYYY-MM-DD.',
             flags: MessageFlags.Ephemeral,
           });
         }
 
-        if (!(new RegExp(/\d{2}:\d{2}/).test(timeString))) {
+        if (!(new RegExp(/^\d{2}:\d{2}$/).test(timeString))) {
           return interaction.followUp({
             content: 'Invalid time format provided. Must be of format: HH:MM.',
             flags: MessageFlags.Ephemeral,
@@ -466,7 +466,7 @@ module.exports = {
         .setDescription('Alter the start time of a scheduled event.')
         .addStringOption((opt) => opt
           .setName('event-code')
-          .setDescription('Six character code of the upcoming event you wish to cancel.')
+          .setDescription('Six character code of the upcoming event you wish to reschedule')
           .setRequired(true))
         .addIntegerOption((opt) => opt
           .setName('duration')
@@ -589,7 +589,7 @@ module.exports = {
         .setDescription('Cancel your upcoming event.')
         .addStringOption((opt) => opt
           .setName('event-code')
-          .setDescription('Six character code of the upcoming event you wish to cancel.')
+          .setDescription('Six character code of the upcoming event you wish to cancel')
           .setRequired(true))
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
