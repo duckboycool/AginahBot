@@ -167,6 +167,54 @@ const sendScheduleMessage = async (interaction, targetDate, title = null, pingRo
   await updateScheduleBoards(interaction.client, interaction.guild);
 };
 
+const createEvent = async (interaction, time) => {
+  const title = interaction.options.getString('title');
+  const pingRole = interaction.options.getRole('ping-role', false) ?? null;
+  const duration = interaction.options.getInteger('duration');
+
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+  if (pingRole && !await isRolePingable(interaction.guild.id, pingRole)) {
+    return interaction.followUp({
+      content: 'Permission to ping that role has not been granted.',
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
+  const scheduleNewPermissions = await verifyScheduleNewPermissions(interaction, pingRole);
+  if (!scheduleNewPermissions.ok) {
+    return interaction.followUp({
+      content: `Required permissions are missing for this command. (` +
+        `${formatPermissionList(scheduleNewPermissions.missingPermissions)})`,
+      flags: MessageFlags.Ephemeral,
+    });
+  }
+
+  try {
+    const currentDate = new Date();
+    const targetDate = new Date(time);
+
+    if (isNaN(targetDate.getTime())) {
+      return interaction.followUp({
+        content: 'The date you provided appears invalid.',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    if (targetDate.getTime() < currentDate.getTime()) {
+      return interaction.followUp({
+        content: 'You can\'t schedule an event in the past!',
+        flags: MessageFlags.Ephemeral,
+      });
+    }
+
+    await sendScheduleMessage(interaction, targetDate, title, pingRole, duration);
+    return interaction.followUp('New event created.');
+  } catch (e) {
+    return interaction.followUp(replyError('Something went wrong and the event could not be created.\n'));
+  }
+}
+
 module.exports = {
   category: 'Event Scheduling',
   commands: [
@@ -324,30 +372,9 @@ module.exports = {
           .setRequired(false))
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
-        const title = interaction.options.getString('title');
-        const pingRole = interaction.options.getRole('ping-role', false) ?? null;
         const dateString = interaction.options.getString('date');
         const timeString = interaction.options.getString('time');
         const utcOffset = interaction.options.getInteger('timezone');
-        const duration = interaction.options.getInteger('duration');
-
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-        if (pingRole && !await isRolePingable(interaction.guild.id, pingRole)) {
-          return interaction.followUp({
-            content: 'Permission to ping that role has not been granted.',
-            flags: MessageFlags.Ephemeral,
-          });
-        }
-
-        const scheduleNewPermissions = await verifyScheduleNewPermissions(interaction, pingRole);
-        if (!scheduleNewPermissions.ok) {
-          return interaction.followUp({
-            content: `Required permissions are missing for this command. (` +
-              `${formatPermissionList(scheduleNewPermissions.missingPermissions)})`,
-            flags: MessageFlags.Ephemeral,
-          });
-        }
 
         if (!(new RegExp(/\d{4}-\d{2}-\d{2}/).test(dateString))) {
           return interaction.followUp({
@@ -367,29 +394,7 @@ module.exports = {
           `${dateString}T${timeString}:00.000+${utcOffset.toString().padStart(2,'0')}:00` :
           `${dateString}T${timeString}:00.000-${Math.abs(utcOffset).toString().padStart(2,'0')}:00`;
 
-        try{
-          const currentDate = new Date();
-          const targetDate = new Date(dateTimeString);
-
-          if (isNaN(targetDate.getTime())) {
-            return interaction.followUp({
-              content: 'The date you provided appears invalid.',
-              flags: MessageFlags.Ephemeral,
-            });
-          }
-
-          if (targetDate.getTime() < currentDate.getTime()) {
-            return interaction.followUp({
-              content: 'You can\'t schedule an event in the past!',
-              flags: MessageFlags.Ephemeral,
-            });
-          }
-
-          await sendScheduleMessage(interaction, targetDate, title, pingRole, duration);
-          return interaction.followUp('New event created.');
-        } catch (e) {
-          return interaction.followUp(replyError('Something went wrong and the event could not be created.\n'));
-        }
+        await createEvent(interaction, dateTimeString);
       }
     },
     {
@@ -415,45 +420,9 @@ module.exports = {
           .setRequired(false))
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
-        const title = interaction.options.getString('title');
-        const pingRole = interaction.options.getRole('ping-role', false) ?? null;
         const timestamp = Math.floor(interaction.options.getNumber('unix-timestamp')) * 1000;
-        const duration = interaction.options.getInteger('duration');
 
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-        if (pingRole && !await isRolePingable(interaction.guild.id, pingRole)) {
-          return interaction.followUp({
-            content: 'Permission to ping that role has not been granted.',
-            flags: MessageFlags.Ephemeral,
-          });
-        }
-
-        const scheduleNewTSPermissions = await verifyScheduleNewPermissions(interaction, pingRole);
-        if (!scheduleNewTSPermissions.ok) {
-          return interaction.followUp({
-            content: `Required permissions are missing for this command. (` +
-              `${formatPermissionList(scheduleNewTSPermissions.missingPermissions)})`,
-            flags: MessageFlags.Ephemeral,
-          });
-        }
-
-        try{
-          const currentDate = new Date();
-          const targetDate = new Date(timestamp);
-
-          if (targetDate.getTime() < currentDate.getTime()) {
-            return interaction.followUp({
-              content: 'You can\'t schedule an event in the past!',
-              flags: MessageFlags.Ephemeral,
-            });
-          }
-
-          await sendScheduleMessage(interaction, targetDate, title, pingRole, duration);
-          return interaction.followUp('New event created.');
-        } catch (e) {
-          return interaction.followUp(replyError('Something went wrong and the event could not be created.\n'));
-        }
+        await createEvent(interaction, timestamp);
       }
     },
     {
@@ -483,46 +452,12 @@ module.exports = {
           .setRequired(false))
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
-        const title = interaction.options.getString('title');
-        const pingRole = interaction.options.getRole('ping-role', false) ?? null;
         const hours = interaction.options.getInteger('hours');
         const minutes = interaction.options.getInteger('minutes');
-        const duration = interaction.options.getInteger('duration');
 
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        const timestamp = new Date().getTime() + (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
 
-        if (pingRole && !await isRolePingable(interaction.guild.id, pingRole)) {
-          return interaction.followUp({
-            content: 'Permission to ping that role has not been granted.',
-            flags: MessageFlags.Ephemeral,
-          });
-        }
-
-        const scheduleNewRelativePermissions = await verifyScheduleNewPermissions(interaction, pingRole);
-        if (!scheduleNewRelativePermissions.ok) {
-          return interaction.followUp({
-            content: `Required permissions are missing for this command. (` +
-              `${formatPermissionList(scheduleNewRelativePermissions.missingPermissions)})`,
-            flags: MessageFlags.Ephemeral,
-          });
-        }
-
-        try{
-          const currentDate = new Date();
-          const targetDate = new Date(new Date().getTime() + (hours * 60 * 60 * 1000) + (minutes * 60 * 1000));
-
-          if (targetDate.getTime() < currentDate.getTime()) {
-            return interaction.followUp({
-              content: 'You can\'t schedule an event in the past!',
-              flags: MessageFlags.Ephemeral,
-            });
-          }
-
-          await sendScheduleMessage(interaction, targetDate, title, pingRole, duration);
-          return interaction.followUp('New event created.');
-        } catch (e) {
-          return interaction.followUp(replyError('Something went wrong and the event could not be created.\n'));
-        }
+        await createEvent(interaction, timestamp);
       }
     },
     {
