@@ -10,6 +10,13 @@ module.exports = {
         .setDescription('Create a ready system in this channel.')
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
+        if (!interaction.channel.isVoiceBased()) {
+          return interaction.reply({
+            content: 'Can only create ready systems in voice channels.',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guild.id]);
         if (!guildData) {
           return interaction.reply({
