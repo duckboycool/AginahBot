@@ -97,7 +97,7 @@ const sendScheduleMessage = async (interaction, targetDate, title = null, pingRo
     .setTitle(`${title || 'New Event'}`)
     .setDescription(
       `Starts <t:${embedTimestamp}:R> and should last ` +
-      `${duration ? `about ${duration} hours` : 'an undisclosed amount of time'}.`
+      `${duration ? `about ${duration} hour${duration == 1 ? '' : 's'}` : 'an undisclosed amount of time'}.`
     )
     .setColor('#6081cb')
     .setAuthor({ name: interaction.member.displayName })
@@ -168,9 +168,9 @@ const sendScheduleMessage = async (interaction, targetDate, title = null, pingRo
 };
 
 const createEvent = async (interaction, time) => {
-  const title = interaction.options.getString('title');
+  const title = interaction.options.getString('title', true);
   const pingRole = interaction.options.getRole('ping-role', false) ?? null;
-  const duration = interaction.options.getInteger('duration');
+  const duration = Math.round(interaction.options.getNumber('duration', true) * 2) / 2;
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
@@ -214,6 +214,13 @@ const createEvent = async (interaction, time) => {
     return interaction.followUp(replyError('Something went wrong and the event could not be created.\n'));
   }
 }
+
+const buildDuration = (opt) => opt
+  .setName('duration')
+  .setDescription('Number of hours you intend this event to run (rounded to nearest half hour)')
+  .setMinValue(0.5)
+  .setMaxValue(48)
+  .setRequired(true);
 
 module.exports = {
   category: 'Event Scheduling',
@@ -362,10 +369,7 @@ module.exports = {
           .setDescription('Title for this event')
           .setMaxLength(100)
           .setRequired(true))
-        .addIntegerOption((opt) => opt
-          .setName('duration')
-          .setDescription('Number of hours you intend this event to run')
-          .setRequired(true))
+        .addNumberOption(buildDuration)
         .addRoleOption((opt) => opt
           .setName('ping-role')
           .setDescription('Optional role to ping for this event')
@@ -401,7 +405,7 @@ module.exports = {
       commandBuilder: new SlashCommandBuilder()
         .setName('schedule-new-ts')
         .setDescription('Schedule a new event based on a UNIX timestamp.')
-        .addNumberOption((opt) => opt
+        .addIntegerOption((opt) => opt
           .setName('unix-timestamp')
           .setDescription('UNIX timestamp')
           .setRequired(true))
@@ -410,17 +414,14 @@ module.exports = {
           .setDescription('Title for this event')
           .setMaxLength(100)
           .setRequired(true))
-        .addIntegerOption((opt) => opt
-          .setName('duration')
-          .setDescription('Number of hours you intend this event to run')
-          .setRequired(true))
+        .addNumberOption(buildDuration)
         .addRoleOption((opt) => opt
           .setName('ping-role')
           .setDescription('Optional role to ping for this event')
           .setRequired(false))
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
-        const timestamp = Math.floor(interaction.options.getNumber('unix-timestamp')) * 1000;
+        const timestamp = interaction.options.getInteger('unix-timestamp', true) * 1000;
 
         await createEvent(interaction, timestamp);
       }
@@ -432,20 +433,19 @@ module.exports = {
         .addIntegerOption((opt) => opt
           .setName('hours')
           .setDescription('Hours in the future your event will start')
+          .setMinValue(0)
           .setRequired(true))
         .addIntegerOption((opt) => opt
           .setName('minutes')
           .setDescription('Minutes in the future your event will start')
+          .setMinValue(0)
           .setRequired(true))
         .addStringOption((opt) => opt
           .setName('title')
           .setDescription('Title for this event')
           .setMaxLength(100)
           .setRequired(true))
-        .addIntegerOption((opt) => opt
-          .setName('duration')
-          .setDescription('Number of hours you intend this event to run')
-          .setRequired(true))
+        .addNumberOption(buildDuration)
         .addRoleOption((opt) => opt
           .setName('ping-role')
           .setDescription('Optional role to ping for this event')
@@ -467,11 +467,10 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('event-code')
           .setDescription('Six character code of the upcoming event you wish to reschedule')
+          .setMinLength(6)
+          .setMaxLength(6)
           .setRequired(true))
-        .addIntegerOption((opt) => opt
-          .setName('duration')
-          .setDescription('Number of hours you intend this event to run')
-          .setRequired(true))
+        .addNumberOption(buildDuration)
         .addIntegerOption((opt) => opt
           .setName('days')
           .setDescription('Days to adjust the event')
@@ -488,11 +487,11 @@ module.exports = {
       async execute(interaction) {
         await interaction.deferReply();
 
-        const eventCode = interaction.options.getString('event-code');
+        const eventCode = interaction.options.getString('event-code', true);
         const days = interaction.options.getInteger('days', false) || 0;
         const hours = interaction.options.getInteger('hours', false) || 0;
         const minutes = interaction.options.getInteger('minutes', false) || 0;
-        const duration = interaction.options.getInteger('duration');
+        const duration = Math.round(interaction.options.getNumber('duration', true) * 2) / 2;
 
         let sql = `SELECT se.id, se.timestamp, se.schedulingUserId, se.channelId, se.messageId, se.title
                    FROM scheduled_events se
@@ -544,7 +543,7 @@ module.exports = {
           .setTitle(`${eventData.title || 'New Event'}`)
           .setDescription(
             `Starts <t:${embedTimestamp}:R> and should last ` +
-            `${duration ? `about ${duration} hours` : 'an undisclosed amount of time'}.`
+            `${duration ? `about ${duration} hour${duration == 1 ? '' : 's'}` : 'an undisclosed amount of time'}.`
           )
           .setColor('#6081cb')
           .setAuthor({ name: interaction.member.displayName })
@@ -590,6 +589,8 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('event-code')
           .setDescription('Six character code of the upcoming event you wish to cancel')
+          .setMinLength(6)
+          .setMaxLength(6)
           .setRequired(true))
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
@@ -816,7 +817,7 @@ module.exports = {
         .setName('schedule-option-threads')
         .setDescription('Enable or disable automatic thread creation for scheduled events.')
         .addBooleanOption((opt) => opt
-          .setName('toggle' )
+          .setName('toggle')
           .setDescription('True to enable, False to disable')
           .setRequired(true))
         .setContexts(InteractionContextType.Guild)
