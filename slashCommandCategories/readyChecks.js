@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, MessageFlags, InteractionContextType } = require('discord.js');
-const { dbExecute, dbQueryOne, dbQueryAll, replyError, verifyIsAdmin } = require('../lib');
+const { dbExecute, dbQueryOne, dbQueryAll, replyError, verifyModRole } = require('../lib');
 
 module.exports = {
   category: 'Ready System',
@@ -260,13 +260,8 @@ module.exports = {
           });
         }
 
-        // Disallow anyone except the one who started the game from cancelling it
-        if (
-          !verifyIsAdmin(interaction.member) &&
-          !interaction.member.permissions.has(PermissionFlagsBits.ManageChannels) &&
-          !interaction.member.permissions.has(PermissionFlagsBits.ManageMessages) &&
-          !interaction.user.id !== readySystem.userId
-        ) {
+        // Disallow anyone except mods or the one who started the game from cancelling it
+        if (interaction.user.id !== readySystem.userId && !await verifyModRole(interaction.member)) {
           return interaction.reply({
             content: `Only <@${readySystem.userId}> or an otherwise privileged user may cancel the game.`,
             flags: MessageFlags.Ephemeral,
