@@ -1,5 +1,5 @@
 const { verifyModRole, buildControlMessagePayload, dbQueryAll, dbQueryOne, dbExecute, verifyChannelPermissions,
-  formatPermissionList } = require('../lib');
+  formatPermissionList, replyError } = require('../lib');
 const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, UserSelectMenuBuilder,
   StringSelectMenuBuilder, StringSelectMenuOptionBuilder, PermissionFlagsBits, MessageFlags } = require('discord.js');
 
@@ -126,7 +126,7 @@ module.exports = async (client, interaction) => {
       const event = await dbQueryOne(sql, [interaction.guild.id, eventCode]);
       if (!event) {
         return interaction.update({
-          content: 'Unable to send event ping. Please contact an administrator.',
+          content: replyError('Unable to send event ping. '),
         });
       }
 

@@ -582,7 +582,7 @@ module.exports = {
           const schedulingUser = await interaction.guild.members.fetch(eventData.schedulingUserId);
           return interaction.followUp({
             content: 'This event can only be cancelled by the user who scheduled it ' +
-              `(${schedulingUser.displayName}), or by an administrator.`,
+              `(${schedulingUser}), or by a moderator.`,
             flags: MessageFlags.Ephemeral,
           });
         }
@@ -687,7 +687,7 @@ module.exports = {
             const schedulingUser = await interaction.guild.members.fetch(eventData.schedulingUserId);
             return interaction.followUp({
               content: 'This event can only be cancelled by the user who scheduled it ' +
-                `(${schedulingUser.displayName}), or by an administrator.`,
+                `(${schedulingUser}), or by a moderator.`,
               flags: MessageFlags.Ephemeral,
             });
           }

@@ -1,4 +1,4 @@
-const { verifyModRole } = require('../lib');
+const { verifyModRole, replyError } = require('../lib');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require('discord.js');
 
 module.exports = async (client, interaction) => {
@@ -58,7 +58,7 @@ module.exports = async (client, interaction) => {
 
     default:
       return interaction.reply({
-        content: 'Unknown eventRoomModal interaction. Please contact an administrator.',
+        content: replyError('Unknown eventRoomModal interaction. '),
         flags: MessageFlags.Ephemeral,
       });
   }
