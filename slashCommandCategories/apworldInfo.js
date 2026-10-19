@@ -2,7 +2,7 @@ const { SlashCommandBuilder, InteractionContextType, PermissionFlagsBits, Messag
   escapeMarkdown } = require('discord.js');
 const { dbExecute, dbQueryAll, dbQueryOne, verifyModRole } = require('../lib');
 
-const autocomplete_world = async (interaction) => {
+const autocompleteWorld = async (interaction) => {
   const curValue = interaction.options.getString('world', true);
   if (!curValue) {
     return interaction.respond([]);
@@ -57,7 +57,7 @@ module.exports = {
           embeds: [embed],
         });
       },
-      autocomplete: autocomplete_world
+      autocomplete: autocompleteWorld
     },
     {
       commandBuilder: new SlashCommandBuilder()
@@ -128,7 +128,7 @@ module.exports = {
           });
         }
       },
-      autocomplete: autocomplete_world
+      autocomplete: autocompleteWorld
     },
     {
       commandBuilder: new SlashCommandBuilder()
@@ -168,7 +168,7 @@ module.exports = {
           flags: MessageFlags.Ephemeral,
         });
       },
-      autocomplete: autocomplete_world
+      autocomplete: autocompleteWorld
     },
     {
       commandBuilder: new SlashCommandBuilder()
@@ -212,7 +212,7 @@ module.exports = {
           flags: MessageFlags.Ephemeral,
         });
       },
-      autocomplete: autocomplete_world
+      autocomplete: autocompleteWorld
     },
     {
       commandBuilder: new SlashCommandBuilder()
@@ -269,7 +269,7 @@ module.exports = {
       async autocomplete(interaction) {
         const field = interaction.options.getFocused(true);
         if (field.name === 'world') {
-          return autocomplete_world(interaction);
+          return autocompleteWorld(interaction);
         }
 
         const worldName = interaction.options.getString('world');
