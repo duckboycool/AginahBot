@@ -325,14 +325,6 @@ module.exports = {
       commandBuilder: new SlashCommandBuilder()
         .setName('schedule-new')
         .setDescription('Schedule a new event.')
-        .addStringOption((opt) => opt
-          .setName('date')
-          .setDescription('Format: YYYY-MM-DD')
-          .setRequired(true))
-        .addStringOption((opt) => opt
-          .setName('time')
-          .setDescription('24-Hour format: HH:MM')
-          .setRequired(true))
         .addIntegerOption((opt) => opt
           .setName('timezone')
           .setDescription('Nearest timezone to you')
@@ -365,6 +357,16 @@ module.exports = {
             { name: 'UTC + 12', value: 12 },
           ))
         .addStringOption((opt) => opt
+          .setName('date')
+          .setDescription('Format: YYYY-MM-DD')
+          .setRequired(true)
+          .setAutocomplete(true))
+        .addStringOption((opt) => opt
+          .setName('time')
+          .setDescription('24-Hour format: HH:MM')
+          .setRequired(true)
+          .setAutocomplete(true))
+        .addStringOption((opt) => opt
           .setName('title')
           .setDescription('Title for this event')
           .setMaxLength(100)
@@ -381,14 +383,14 @@ module.exports = {
         const utcOffset = interaction.options.getInteger('timezone');
 
         if (!(new RegExp(/^\d{4}-\d{2}-\d{2}$/).test(dateString))) {
-          return interaction.followUp({
+          return interaction.reply({
             content: 'Invalid date format provided. Must be of format: YYYY-MM-DD.',
             flags: MessageFlags.Ephemeral,
           });
         }
 
         if (!(new RegExp(/^\d{2}:\d{2}$/).test(timeString))) {
-          return interaction.followUp({
+          return interaction.reply({
             content: 'Invalid time format provided. Must be of format: HH:MM.',
             flags: MessageFlags.Ephemeral,
           });
@@ -399,7 +401,97 @@ module.exports = {
           `${dateString}T${timeString}:00.000-${Math.abs(utcOffset).toString().padStart(2,'0')}:00`;
 
         await createEvent(interaction, dateTimeString);
-      }
+      },
+      async autocomplete(interaction) {
+        const times = [
+          { name: '12 AM', value: '00:00' },
+          { name: '1 AM', value: '01:00' },
+          { name: '2 AM', value: '02:00' },
+          { name: '3 AM', value: '03:00' },
+          { name: '4 AM', value: '04:00' },
+          { name: '5 AM', value: '05:00' },
+          { name: '6 AM', value: '06:00' },
+          { name: '7 AM', value: '07:00' },
+          { name: '8 AM', value: '08:00' },
+          { name: '9 AM', value: '09:00' },
+          { name: '10 AM', value: '10:00' },
+          { name: '11 AM', value: '11:00' },
+          { name: '12 PM', value: '12:00' },
+          { name: '1 PM', value: '13:00' },
+          { name: '2 PM', value: '14:00' },
+          { name: '3 PM', value: '15:00' },
+          { name: '4 PM', value: '16:00' },
+          { name: '5 PM', value: '17:00' },
+          { name: '6 PM', value: '18:00' },
+          { name: '7 PM', value: '19:00' },
+          { name: '8 PM', value: '20:00' },
+          { name: '9 PM', value: '21:00' },
+          { name: '10 PM', value: '22:00' },
+          { name: '11 PM', value: '23:00' },
+        ]
+        
+        const field = interaction.options.getFocused(true);
+        const utcOffset = interaction.options.getInteger('timezone', false);
+        if (field.name === 'time') {
+          const dateString = interaction.options.getString('date', false);
+          if (!dateString || utcOffset == null || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+            return interaction.respond(times);
+          }
+
+          const date = new Date(dateString);
+          if (isNaN(date.getTime())) {
+            return interaction.respond(times);
+          }
+
+          const out = [];
+
+          const timeMatch = field.value.match(/^(\d{1,2}):\d{2}$/);
+          if (timeMatch) {
+            const suggestedTime = timeMatch[1].length === 1 ? `0${field.value}` : field.value;
+            out.push({ name: suggestedTime, value: suggestedTime });
+          }
+
+          const hoursAhead = (new Date().getTime() - date.getTime()) / (60 * 60 * 1000) + utcOffset;
+          for (let i = 0; i < 24; i++) {
+            if ((hoursAhead - i) <= 0) {
+              out.push(times[i]);
+            }
+          }
+
+          return interaction.respond(out);
+        }
+
+        if (field.name !== 'date') {
+          return interaction.respond([]);
+        }
+
+        const out = [];
+        const today = new Date(new Date().getTime() + (utcOffset ?? 0) * 60 * 60 * 1000);
+        
+        const dateInput = interaction.options.getString('date');
+        if (dateInput) {
+          // Suggest date for different formatts
+          const dateMatch = dateInput.match(/^(?:(\d{4})[/-])?(\d{1,2})[/-](\d{1,2})$/);
+          if (dateMatch) {
+            const year = dateMatch[1] ?? today.getUTCFullYear(); // Assume current year if not given
+            const guessString = `${year}-${dateMatch[2].length === 1 ? '0' + dateMatch[2] : dateMatch[2]}` +
+              `-${dateMatch[3].length === 1 ? '0' + dateMatch[3] : dateMatch[3]}`
+
+            out.push({ name: guessString, value: guessString });
+          }
+        }
+
+        if (utcOffset != null) {
+          // Don't love this method
+          const todayString = today.toISOString().split('T')[0];
+          out.push({ name: `Today (${todayString})`, value: todayString });
+  
+          const next = new Date(new Date().getTime() + (utcOffset + 24) * 60 * 60 * 1000).toISOString().split('T')[0];
+          out.push({ name: `Tomorrow (${next})`, value: next });
+        }
+
+        return interaction.respond(out);
+      },
     },
     {
       commandBuilder: new SlashCommandBuilder()
