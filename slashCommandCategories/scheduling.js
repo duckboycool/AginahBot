@@ -213,7 +213,7 @@ const createEvent = async (interaction, time) => {
   } catch (e) {
     return interaction.followUp(replyError('Something went wrong and the event could not be created.\n'));
   }
-}
+};
 
 const buildDuration = (opt) => opt
   .setName('duration')
@@ -221,6 +221,23 @@ const buildDuration = (opt) => opt
   .setMinValue(0.5)
   .setMaxValue(48)
   .setRequired(true);
+
+const autocompleteCode = async (interaction) => {
+  const curValue = interaction.options.getString('event-code', true);
+
+  // Probably a better way to perform this search
+  const sql = `SELECT eventCode
+               FROM scheduled_events se
+               JOIN guild_data gd ON se.guildDataId = gd.id
+               WHERE gd.guildId=?
+                 AND schedulingUserId=?
+                 AND timestamp > ?
+                 AND eventCode LIKE CONCAT('%', ?, '%') LIMIT 25`;
+  const escapedVal = curValue.replaceAll(/([%_[])/g, '[$1]');
+  const matches = await dbQueryAll(sql, [interaction.guildId, interaction.user.id, new Date().getTime(), escapedVal]);
+
+  return interaction.respond(matches.map((code) => ({ name: code.eventCode, value: code.eventCode })));
+};
 
 module.exports = {
   category: 'Event Scheduling',
@@ -561,7 +578,8 @@ module.exports = {
           .setDescription('Six character code of the upcoming event you wish to reschedule')
           .setMinLength(6)
           .setMaxLength(6)
-          .setRequired(true))
+          .setRequired(true)
+          .setAutocomplete(true))
         .addNumberOption(buildDuration)
         .addIntegerOption((opt) => opt
           .setName('days')
@@ -670,7 +688,8 @@ module.exports = {
         return interaction.followUp(
           `Event **${eventData.title || eventCode}** updated to <t:${Math.floor(newTimestamp/1000)}:F>`
         );
-      }
+      },
+      autocomplete: autocompleteCode
     },
     {
       longDescription: 'Cancel an upcoming scheduled event. An event can only be cancelled by a moderator or by the ' +
@@ -683,7 +702,8 @@ module.exports = {
           .setDescription('Six character code of the upcoming event you wish to cancel')
           .setMinLength(6)
           .setMaxLength(6)
-          .setRequired(true))
+          .setRequired(true)
+          .setAutocomplete(true))
         .setContexts(InteractionContextType.Guild),
       async execute(interaction) {
         const eventCode = interaction.options.getString('event-code');
@@ -774,7 +794,8 @@ module.exports = {
         } catch(e) {
           return interaction.followUp(replyError('Something went wrong and the event could not be cancelled.\n'));
         }
-      }
+      },
+      autocomplete: autocompleteCode
     },
     {
       longDescription: 'Create and pin a message containing an automatically updated list of scheduled events ' +
