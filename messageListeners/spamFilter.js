@@ -63,8 +63,12 @@ module.exports = async (client, message) => {
     }
     const alertsChannel = await message.guild.channels.fetch(options.alertsChannelId);
 
-    let content = `Found ${message.author} for spam detection. ` + 
-      `Hit ${points} "spam points" in ${recent.length} messages (in ${period / 1000} seconds).\n\n`;
+    const timestamps = recent.map((msg) => msg.createdTimestamp);
+    // Keep 1 decimal point while dividing ms by 1000
+    const duration = Math.round((Math.max(...timestamps) - Math.min(...timestamps)) / 100) / 10;
+
+    let content = `Found ${message.author} for spam detection. ` +
+      `Hit ${points} "spam points" in ${recent.length} messages (in ${duration} seconds).\n\n`;
 
     if (!options.spamPurge) {
       content += 'Would have deleted the following messages:';
