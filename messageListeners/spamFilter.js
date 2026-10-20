@@ -24,11 +24,12 @@ const spamPoints = (messageList) => {
 
 module.exports = async (client, message) => {
   // Ignore mod messages. Could use verifyModRole, but that might send a request on every message.
-  if (message.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
+  if (message.member.permissions.has(PermissionFlagsBits.ManageMessages) || message.author.bot) {
     return;
   }
 
   if (client.purgeTimes.get(message.author.id) > message.createdTimestamp - period) {
+    await message.delete();
     return;
   }
   

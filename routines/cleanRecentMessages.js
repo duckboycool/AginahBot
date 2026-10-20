@@ -1,4 +1,5 @@
-const { period } = require('../messageListeners/spamFilter.js');
+// No easy way to get this directly from the messageListener
+const period = 10_000;
 
 module.exports = (client) => {
   const curTime = Date.now();
@@ -13,14 +14,14 @@ module.exports = (client) => {
     }
   }
 
-  const purgeLength = client.purgeTimes.length;
+  const purgeLength = client.purgeTimes.size;
 
   for (const [user, time] of client.purgeTimes.entries()) {
     if (curTime > time + period) {
-      client.recentMessages.delete(user);
+      client.purgeTimes.delete(user);
     }
   }
 
   console.log(`Cleared spam logs from ${startLength} users to ${client.recentMessages.size} ` +
-    `(${purgeLength} to ${client.purgeTimes.length} purges)`);
+    `(${purgeLength} to ${client.purgeTimes.size} purges)`);
 };
