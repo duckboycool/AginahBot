@@ -727,7 +727,7 @@ module.exports = {
       title: roleCategory.categoryName,
       fields: [],
     };
-    sql = 'SELECT r.roleId, r.reaction, r.reactionString, r.description FROM roles r WHERE r.categoryId=?';
+    sql = 'SELECT r.roleId, r.reaction, r.description FROM roles r WHERE r.categoryId=? ORDER BY r.position';
     const roles = await module.exports.dbQueryAll(sql, [roleCategory.id]);
 
     const actionRows = [];
@@ -738,7 +738,7 @@ module.exports = {
 
       // Add an embed field for this role
       roleInfoEmbed.fields.push({
-        name: `${role.reactionString} ${roleName}`,
+        name: `${role.reaction} ${roleName}`,
         value: role.description || 'No description provided.',
       });
 

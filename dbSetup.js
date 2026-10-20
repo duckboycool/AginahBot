@@ -24,11 +24,10 @@ const roleCategories = `CREATE TABLE IF NOT EXISTS role_categories (
 const roles = `CREATE TABLE IF NOT EXISTS roles (
     id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     categoryId BIGINT NOT NULL,
-    roleId VARCHAR(64) NOT NULL,
-    roleName VARCHAR(128) NOT NULL,
+    roleId VARCHAR(64) NOT NULL UNIQUE KEY,
     reaction VARCHAR(128) NOT NULL,
-    reactionString VARCHAR(128) NOT NULL,
-    description VARCHAR(128)
+    description VARCHAR(128),
+    position TINYINT(2) NOT NULL
 )`;
 
 const roomSystems = `CREATE TABLE IF NOT EXISTS room_systems (
