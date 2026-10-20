@@ -572,7 +572,7 @@ module.exports = {
                  AND se.timestamp > ?
              ORDER BY se.timestamp
              LIMIT 10`;
-      const events = await module.exports.dbQueryAll(sql, [guild.id, new Date().getTime()]);
+      const events = await module.exports.dbQueryAll(sql, [guild.id, Date.now()]);
 
       // If there are no scheduled events for this guild, continue to the next schedule board
       if (events.length === 0) {
@@ -587,7 +587,7 @@ module.exports = {
                  AND se.timestamp > ?
              ORDER BY se.timestamp
              LIMIT 10`;
-      const countResult = await module.exports.dbQueryOne(sql, [guild.id, new Date().getTime()]);
+      const countResult = await module.exports.dbQueryOne(sql, [guild.id, Date.now()]);
 
       // Embeds which will be PUT to the schedule board message
       const embeds = [];

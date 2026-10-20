@@ -234,7 +234,7 @@ const autocompleteCode = async (interaction) => {
                  AND timestamp > ?
                  AND eventCode LIKE CONCAT('%', ?, '%') LIMIT 25`;
   const escapedVal = curValue.replaceAll(/([%_[])/g, '[$1]');
-  const matches = await dbQueryAll(sql, [interaction.guildId, interaction.user.id, new Date().getTime(), escapedVal]);
+  const matches = await dbQueryAll(sql, [interaction.guildId, interaction.user.id, Date.now(), escapedVal]);
 
   return interaction.respond(matches.map((code) => ({ name: code.eventCode, value: code.eventCode })));
 };
@@ -292,7 +292,7 @@ module.exports = {
                    WHERE gd.guildId=?
                      AND se.timestamp > ?
                    ORDER BY se.timestamp`;
-        const events = await dbQueryAll(sql, [interaction.guildId, new Date().getTime()]);
+        const events = await dbQueryAll(sql, [interaction.guildId, Date.now()]);
 
         if (events.length === 0) {
           return interaction.reply({ content: 'There are currently no events scheduled.', flags: MessageFlags.Ephemeral });
@@ -468,7 +468,7 @@ module.exports = {
             out.push({ name: suggestedTime, value: suggestedTime });
           }
 
-          const hoursAhead = (new Date().getTime() - date.getTime()) / (60 * 60 * 1000) + utcOffset;
+          const hoursAhead = (Date.now() - date.getTime()) / (60 * 60 * 1000) + utcOffset;
           for (let i = 0; i < 24; i++) {
             if ((hoursAhead - i) <= 0) {
               out.push(times[i]);
@@ -483,7 +483,7 @@ module.exports = {
         }
 
         const out = [];
-        const today = new Date(new Date().getTime() + (utcOffset ?? 0) * 60 * 60 * 1000);
+        const today = new Date(Date.now() + (utcOffset ?? 0) * 60 * 60 * 1000);
         
         const dateInput = interaction.options.getString('date');
         if (dateInput) {
@@ -503,7 +503,7 @@ module.exports = {
           const todayString = today.toISOString().split('T')[0];
           out.push({ name: `Today (${todayString})`, value: todayString });
   
-          const next = new Date(new Date().getTime() + (utcOffset + 24) * 60 * 60 * 1000).toISOString().split('T')[0];
+          const next = new Date(Date.now() + (utcOffset + 24) * 60 * 60 * 1000).toISOString().split('T')[0];
           out.push({ name: `Tomorrow (${next})`, value: next });
         }
 
@@ -564,7 +564,7 @@ module.exports = {
         const hours = interaction.options.getInteger('hours');
         const minutes = interaction.options.getInteger('minutes');
 
-        const timestamp = new Date().getTime() + (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
+        const timestamp = Date.now() + (hours * 60 * 60 * 1000) + (minutes * 60 * 1000);
 
         await createEvent(interaction, timestamp);
       }
@@ -610,7 +610,7 @@ module.exports = {
                      AND se.eventCode=?
                      AND timestamp > ?`;
         const eventData = await dbQueryOne(sql, [
-          interaction.guildId, eventCode.toUpperCase(), new Date().getTime(),
+          interaction.guildId, eventCode.toUpperCase(), Date.now(),
         ]);
 
         // If no event is found, notify the user
@@ -634,7 +634,7 @@ module.exports = {
         const newTimestamp = Number(eventData.timestamp) + (days * 24 * 60 * 60 * 1000) + (hours * 60 * 60 * 1000) +
           (minutes * 60 * 1000);
 
-        if (new Date(newTimestamp).getTime() < new Date().getTime()) {
+        if (new Date(newTimestamp).getTime() < Date.now()) {
           return interaction.followUp('You cannot schedule a game in the past!');
         }
 
@@ -718,9 +718,7 @@ module.exports = {
                      WHERE gd.guildId=?
                        AND se.eventCode=?
                        AND timestamp > ?`;
-          const eventData = await dbQueryOne(sql, [
-            interaction.guildId, eventCode.toUpperCase(), new Date().getTime(),
-          ]);
+          const eventData = await dbQueryOne(sql, [interaction.guildId, eventCode.toUpperCase(), Date.now()]);
 
           // If no event is found, notify the user
           if (!eventData) {

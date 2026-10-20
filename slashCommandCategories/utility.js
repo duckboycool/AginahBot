@@ -108,7 +108,7 @@ module.exports = {
         let totalPurgedMembers = 0;
 
         try {
-          const targetDate = Math.floor(new Date().getTime() - (days * 24 * 60 * 60 * 1000));
+          const targetDate = Math.floor(Date.now() - (days * 24 * 60 * 60 * 1000));
           console.info(`\nFetching messages since ${new Date(targetDate).toISOString()}`);
           const messages = await fetchMessagesSince(interaction.channel, targetDate);
           console.info(`Found ${messages.length} messages total`);
