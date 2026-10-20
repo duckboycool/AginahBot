@@ -2,6 +2,19 @@ const { parseEmoji, dbQueryOne, dbQueryAll, dbExecute, updateCategoryMessage, re
 const { ChannelType, PermissionsBitField, SlashCommandBuilder, InteractionContextType, PermissionFlagsBits,
   MessageFlags } = require('discord.js');
 
+const autocompleteCategory = async (interaction, name = 'category-name') => {
+  const curValue = interaction.options.getString(name, true);
+
+  const sql = `SELECT categoryName as name FROM role_categories rc
+    JOIN role_systems rs ON rs.id=rc.roleSystemId
+    JOIN guild_data gd ON gd.id=rs.guildDataId
+    WHERE gd.guildId=? AND categoryName LIKE CONCAT('%', ?, '%') LIMIT 25`;
+  const escapedVal = curValue.replaceAll(/([%_[])/g, '[$1]');
+  const matches = await dbQueryAll(sql, [interaction.guildId, escapedVal]);
+
+  return interaction.respond(matches.map((category) => ({ name: category.name, value: category.name })));
+};
+
 module.exports = {
   category: 'Role Requestor',
   commands: [
@@ -164,7 +177,8 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('old-name')
           .setDescription('Current name of the category you wish to rename')
-          .setRequired(true))
+          .setRequired(true)
+          .setAutocomplete(true))
         .addStringOption((opt) => opt
           .setName('new-name')
           .setDescription('New name of the category')
@@ -197,7 +211,8 @@ module.exports = {
           console.error(e);
           return interaction.followUp(replyError('Something went wrong and the role category could not be renamed.\n'));
         }
-      }
+      },
+      autocomplete: async (interaction) => await autocompleteCategory(interaction, name = 'old-name')
     },
     {
       commandBuilder: new SlashCommandBuilder()
@@ -206,7 +221,8 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('category-name')
           .setDescription('Name of the category you wish to remove')
-          .setRequired(true))
+          .setRequired(true)
+          .setAutocomplete(true))
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
       async execute(interaction) {
@@ -242,7 +258,8 @@ module.exports = {
           console.error(e);
           return interaction.followUp(replyError('Something went wrong and the role category could not be deleted.\n'));
         }
-      }
+      },
+      autocomplete: autocompleteCategory
     },
     {
       commandBuilder: new SlashCommandBuilder()
@@ -251,7 +268,8 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('category-name')
           .setDescription('Name of the category to refresh')
-          .setRequired(true))
+          .setRequired(true)
+          .setAutocomplete(true))
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
       async execute(interaction) {
@@ -283,7 +301,8 @@ module.exports = {
           console.error(e);
           return interaction.followUp(replyError('Something went wrong and the role category could not be deleted.\n'));
         }
-      }
+      },
+      autocomplete: autocompleteCategory
     },
     {
       commandBuilder: new SlashCommandBuilder()
@@ -292,7 +311,8 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('category-name')
           .setDescription('The category your new role should be placed into')
-          .setRequired(true))
+          .setRequired(true)
+          .setAutocomplete(true))
         .addRoleOption((opt) => opt
           .setName('role')
           .setDescription('The role to be added')
@@ -427,7 +447,8 @@ module.exports = {
           console.error(e);
           return interaction.followUp(replyError('Something went wrong and the role could not be added.\n'));
         }
-      }
+      },
+      autocomplete: autocompleteCategory
     },
     {
       commandBuilder: new SlashCommandBuilder()
@@ -436,7 +457,8 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('category-name')
           .setDescription('Name of the category containing the target role')
-          .setRequired(true))
+          .setRequired(true)
+          .setAutocomplete(true))
         .addRoleOption((opt) => opt
           .setName('role')
           .setDescription('Role to remove from category')
@@ -479,7 +501,8 @@ module.exports = {
           console.error(e);
           return interaction.followUp(replyError('Something went wrong and the role could not be removed.\n'));
         }
-      }
+      },
+      autocomplete: autocompleteCategory
     },
   ],
 };
