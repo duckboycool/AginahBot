@@ -24,7 +24,7 @@ module.exports = {
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
       async execute(interaction) {
-        const tagName = interaction.options.getString('tag-name');
+        const tagName = interaction.options.getString('tag-name').toLowerCase();
         const content = interaction.options.getString('content');
 
         // Tags may contain only alphanumeric characters
@@ -45,13 +45,22 @@ module.exports = {
           });
         }
 
+        let sql = `SELECT tagName FROM tag_aliases alias JOIN message_tags tag ON alias.tagId=tag.id
+                   WHERE guildDataId=? AND alias=?`;
+        const existingAlias = await dbQueryOne(sql, [guildData.id, tagName]);
+        if (existingAlias) {
+          return interaction.reply({
+            content: `The \`${existingAlias.tagName}\` tag already has \`${tagName}\` as an alias.`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         // Save new tag to database
-        let sql = `REPLACE INTO message_tags (guildDataId, tagName, tagContent, createdByUserId)
-                           VALUES (?,?,?,?)`;
-        await dbExecute(sql, [guildData.id, tagName.toLowerCase(), content, interaction.user.id]);
+        sql = `REPLACE INTO message_tags (guildDataId, tagName, tagContent, createdByUserId) VALUES (?, ?, ?, ?)`;
+        await dbExecute(sql, [guildData.id, tagName, content, interaction.user.id]);
 
         return interaction.reply({
-          content: `Set content for tag \`${tagName.toLowerCase()}\`.`,
+          content: `Set content for tag \`${tagName}\`.`,
           flags: MessageFlags.Ephemeral,
         });
       },
@@ -68,7 +77,7 @@ module.exports = {
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
       async execute(interaction) {
-        const tagName = interaction.options.getString('tag-name');
+        const tagName = interaction.options.getString('tag-name').toLowerCase();
 
         // Fetch guildDataId
         const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
@@ -81,12 +90,12 @@ module.exports = {
         }
 
         // If the tag does not exist, inform the user
-        let sql = `SELECT 1
+        let sql = `SELECT mt.id
                    FROM message_tags mt
                    JOIN guild_data gd ON mt.guildDataId = gd.id
                    WHERE gd.guildId=?
                     AND mt.tagName=?`;
-        const existing = await dbQueryOne(sql, [interaction.guildId, tagName.toLowerCase()]);
+        const existing = await dbQueryOne(sql, [interaction.guildId, tagName]);
         if (!existing) {
           return interaction.reply({
             content: 'That tag does not exist on this server.',
@@ -95,15 +104,150 @@ module.exports = {
         }
 
         // Delete the tag from the database
-        await dbExecute('DELETE FROM message_tags WHERE guildDataId=? AND tagName=?',
-          [guildData.id, tagName.toLowerCase()]
-        );
+        await dbExecute('DELETE FROM message_tags WHERE id=?', [existing.id]);
+        await dbExecute('DELETE FROM tag_aliases WHERE tagId=?', [existing.id]);
 
         return interaction.reply({
-          content: `Deleted tag \`${tagName.toLowerCase()}\`.`,
+          content: `Deleted tag \`${tagName}\`.`,
           flags: MessageFlags.Ephemeral,
         });
       }
+    },
+    {
+      commandBuilder: new SlashCommandBuilder()
+        .setName('tag-alias')
+        .setDescription('Add an alias to an existing tag in this server.')
+        .addStringOption((opt) => opt
+          .setName('tag-name')
+          .setDescription('The tag to add an alias to')
+          .setMaxLength(tagNameMaxLen)
+          .setRequired(true))
+        .addStringOption((opt) => opt
+          .setName('alias')
+          .setDescription('The alias to be added')
+          .setMaxLength(tagNameMaxLen)
+          .setRequired(true))
+        .setContexts(InteractionContextType.Guild)
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+      async execute(interaction) {
+        const tagName = interaction.options.getString('tag-name').toLowerCase();
+        const alias = interaction.options.getString('alias').toLowerCase();
+
+        // Tags may contain only alphanumeric characters
+        if (alias.search(/\W/) > -1) {
+          return interaction.reply({
+            content: 'Tag names may contain only letters, numbers, and underscores.',
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        // Fetch guildDataId
+        const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
+        if (!guildData) {
+          return interaction.reply({
+            content: replyError('Uh-oh. Something is weird in my database.\n' + 
+              `\`\`\`guild data is missing for guild with id ${interaction.guildId}\`\`\`\n`),
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        const tagId = await dbQueryOne(
+          'SELECT id FROM message_tags WHERE guildDataId=? AND tagName=?', [guildData.id, tagName]
+        );
+        if (!tagId) {
+          return interaction.reply({
+            content: `Could not find tag \`${tagName}\`.`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        const existingTag = await dbQueryOne(
+          'SELECT 1 FROM message_tags WHERE guildDataId=? AND tagName=?', [guildData.id, alias]
+        );
+        if (existingTag) {
+          return interaction.reply({
+            content: `There is already a \`${alias}\` tag.`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        const sql = `SELECT tagName FROM tag_aliases alias JOIN message_tags tag ON alias.tagId=tag.id
+                     WHERE guildDataId=? AND alias=?`;
+        const existingAlias = await dbQueryOne(sql, [guildData.id, alias]);
+        if (existingAlias) {
+          return interaction.reply({
+            content: `The \`${existingAlias.tagName}\` tag already has \`${alias}\` as an alias.`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        // Save new alias to database
+        await dbExecute('INSERT INTO tag_aliases (tagId, alias) VALUES (?, ?)', [tagId.id, alias]);
+
+        return interaction.reply({
+          content: `Set \`${alias}\` as an alias for tag \`${tagName}\`.`,
+          flags: MessageFlags.Ephemeral,
+        });
+      },
+    },
+    {
+      commandBuilder: new SlashCommandBuilder()
+        .setName('tag-unalias')
+        .setDescription('Remove an existing alias for a tag in this server.')
+        .addStringOption((opt) => opt
+          .setName('tag-name')
+          .setDescription('The tag to remove an alias from')
+          .setMaxLength(tagNameMaxLen)
+          .setRequired(true))
+        .addStringOption((opt) => opt
+          .setName('alias')
+          .setDescription('The alias to be removed')
+          .setMaxLength(tagNameMaxLen)
+          .setRequired(true))
+        .setContexts(InteractionContextType.Guild)
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+      async execute(interaction) {
+        const tagName = interaction.options.getString('tag-name').toLowerCase();
+        const alias = interaction.options.getString('alias').toLowerCase();
+
+        // Fetch guildDataId
+        const guildData = await dbQueryOne('SELECT id FROM guild_data WHERE guildId=?', [interaction.guildId]);
+        if (!guildData) {
+          return interaction.reply({
+            content: replyError('Uh-oh. Something is weird in my database.\n' + 
+              `\`\`\`guild data is missing for guild with id ${interaction.guildId}\`\`\`\n`),
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        const tagId = await dbQueryOne(
+          'SELECT id FROM message_tags WHERE guildDataId=? AND tagName=?', [guildData.id, tagName]
+        );
+        if (!tagId) {
+          return interaction.reply({
+            content: `Could not find tag \`${tagName}\`.`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        const aliasId = await dbQueryOne(
+          'SELECT alias.id FROM tag_aliases alias WHERE tagId=? AND alias=?', [tagId.id, alias]
+        );
+        if (!aliasId) {
+          return interaction.reply({
+            content: `Could not find the alias \`${alias}\` on \`${tagName}\`.`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
+        // Remove alias from db
+        await dbExecute('DELETE FROM tag_aliases WHERE id=?', [aliasId.id]);
+
+        return interaction.reply({
+          content: `Removed \`${alias}\` as an alias for tag \`${tagName}\`.`,
+          flags: MessageFlags.Ephemeral,
+        });
+      },
     },
     {
       commandBuilder: new SlashCommandBuilder()

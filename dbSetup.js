@@ -95,6 +95,12 @@ const messageTags = `CREATE TABLE IF NOT EXISTS message_tags (
     UNIQUE KEY guildDataId (guildDataId, tagName)
 )`;
 
+const tagAliases = `CREATE TABLE IF NOT EXISTS tag_aliases (
+    id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    tagId BIGINT NOT NULL,
+    alias VARCHAR(${tagNameMaxLen}) NOT NULL
+)`;
+
 const guildOptions = `CREATE TABLE IF NOT EXISTS guild_options (
   id BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
   guildDataId BIGINT UNSIGNED NOT NULL,
@@ -192,6 +198,7 @@ db.query(eventRspv, handler);
 db.query(modContact, handler);
 db.query(modContactChannels, handler);
 db.query(messageTags, handler);
+db.query(tagAliases, handler);
 db.query(guildOptions, handler);
 db.query(pingableRoles, handler);
 db.query(threadManagement, handler);
