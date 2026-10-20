@@ -1,4 +1,4 @@
-This directory should contain .js files which define functions to be run once per hour. They receive the Discord
+This directory should contain .js files which define functions to be run every 30 minutes. They receive the Discord
 client as their sole argument.
 
 ### example.js

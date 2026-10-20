@@ -30,7 +30,7 @@ client.threadMemberListeners = [];
 client.lastTagUse = new Map(); // For cooldown, doesn't really need to be persistently stored in DB
 client.recentMessages = new Map(); // For spam bot detection
 
-// Load routines and run them once per hour
+// Load routines and run them every 30 minutes
 fs.readdirSync('./routines').filter((file) => file.endsWith('.js')).forEach((routineFile) => {
   const routine = require(`./routines/${routineFile}`);
   setInterval(() => routine(client), 30 * 60 * 1000);
