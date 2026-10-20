@@ -1,4 +1,4 @@
-const { dbExecute, dbQueryOne, managesThread, dbQueryAll, replyError } = require('../lib');
+const { dbExecute, dbQueryOne, managesThread, dbQueryAll, replyError, verifyModRole } = require('../lib');
 const { SlashCommandBuilder, InteractionContextType, MessageFlags, PermissionsBitField,
   PermissionFlagsBits } = require('discord.js');
 
@@ -344,6 +344,13 @@ module.exports = {
           });
         }
 
+        if (tag.moderated && !await verifyModRole(interaction.member)) {
+          return interaction.reply({
+            content: `You cannot edit the \`${tagName}\` tag.`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         let channelTags = interaction.channel.appliedTags;
         if (channelTags.includes(tag.id)) {
           return interaction.reply({
@@ -369,6 +376,7 @@ module.exports = {
         const curValue = interaction.options.getFocused().toLowerCase();
         const matches = interaction.channel.parent.availableTags.filter(
           (tag) => tag.name.toLowerCase().includes(curValue) && !interaction.channel.appliedTags.includes(tag.id)
+            && !tag.moderated
         );
 
         await interaction.respond(matches.map((tag) => ({ name: tag.name, value: tag.name })));
@@ -420,6 +428,13 @@ module.exports = {
           });
         }
 
+        if (tag.moderated && !await verifyModRole(interaction.member)) {
+          return interaction.reply({
+            content: `You cannot edit the \`${tagName}\` tag.`,
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+
         let channelTags = interaction.channel.appliedTags;
         if (!channelTags.includes(tag.id)) {
           return interaction.reply({
@@ -444,6 +459,7 @@ module.exports = {
         const curValue = interaction.options.getFocused().toLowerCase();
         const matches = interaction.channel.parent.availableTags.filter(
           (tag) => tag.name.toLowerCase().includes(curValue) && interaction.channel.appliedTags.includes(tag.id)
+            && !tag.moderated
         );
 
         await interaction.respond(matches.map((tag) => ({ name: tag.name, value: tag.name })));
