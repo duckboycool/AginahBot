@@ -1,6 +1,22 @@
 const { dbQueryOne, dbQueryAll, dbExecute, replyError, tagNameMaxLen, tagContentMaxLen } = require('../lib');
 const { SlashCommandBuilder, InteractionContextType, MessageFlags, PermissionFlagsBits } = require('discord.js');
 
+const autocompleteTag = async (interaction) => {
+  const curValue = interaction.options.getString('tag-name', true);
+
+  // Probably a better way to do this one as well
+  const sql = `SELECT DISTINCT tagName, tags.id FROM
+    (SELECT tagName, tagName alias, id, guildDataId FROM message_tags UNION
+     SELECT tagName, alias, tagId id, guildDataId FROM tag_aliases
+     JOIN message_tags ON message_tags.id=tag_aliases.tagId) tags
+    JOIN guild_data gd ON gd.id=guildDataId
+    WHERE guildId=? AND alias LIKE CONCAT('%', ?, '%') LIMIT 25`;
+  const escapedVal = curValue.replaceAll(/([%_[])/g, '[$1]');
+  const matches = await dbQueryAll(sql, [interaction.guildId, escapedVal]);
+
+  return interaction.respond(matches.map((tag) => ({ name: tag.tagName, value: tag.tagName })));
+};
+
 module.exports = {
   category: 'Message Tags',
   commands: [
@@ -73,7 +89,8 @@ module.exports = {
           .setName('tag-name')
           .setDescription('Name of the tag to be removed')
           .setMaxLength(tagNameMaxLen)
-          .setRequired(true))
+          .setRequired(true)
+          .setAutocomplete(true))
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
       async execute(interaction) {
@@ -111,7 +128,8 @@ module.exports = {
           content: `Deleted tag \`${tagName}\`.`,
           flags: MessageFlags.Ephemeral,
         });
-      }
+      },
+      autocomplete: autocompleteTag
     },
     {
       commandBuilder: new SlashCommandBuilder()
@@ -121,7 +139,8 @@ module.exports = {
           .setName('tag-name')
           .setDescription('The tag to add an alias to')
           .setMaxLength(tagNameMaxLen)
-          .setRequired(true))
+          .setRequired(true)
+          .setAutocomplete(true))
         .addStringOption((opt) => opt
           .setName('alias')
           .setDescription('The alias to be added')
@@ -189,6 +208,7 @@ module.exports = {
           flags: MessageFlags.Ephemeral,
         });
       },
+      autocomplete: autocompleteTag
     },
     {
       commandBuilder: new SlashCommandBuilder()
@@ -198,12 +218,14 @@ module.exports = {
           .setName('tag-name')
           .setDescription('The tag to remove an alias from')
           .setMaxLength(tagNameMaxLen)
-          .setRequired(true))
+          .setRequired(true)
+          .setAutocomplete(true))
         .addStringOption((opt) => opt
           .setName('alias')
           .setDescription('The alias to be removed')
           .setMaxLength(tagNameMaxLen)
-          .setRequired(true))
+          .setRequired(true)
+          .setAutocomplete(true))
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
       async execute(interaction) {
@@ -247,6 +269,27 @@ module.exports = {
           content: `Removed \`${alias}\` as an alias for tag \`${tagName}\`.`,
           flags: MessageFlags.Ephemeral,
         });
+      },
+      async autocomplete(interaction) {
+        const field = interaction.options.getFocused(true);
+        if (field.name === 'tag-name') {
+          return autocompleteTag(interaction);
+        }
+
+        const tagName = interaction.options.getString('tag-name');
+        if (!tagName || field.name !== 'alias') {
+          return interaction.respond([]);
+        }
+        const match = await dbQueryOne('SELECT * FROM message_tags WHERE tagName=?', [tagName]);
+        if (!match) {
+          return interaction.respond([]);
+        }
+
+        const sql = `SELECT alias FROM tag_aliases WHERE tagId=? AND alias LIKE CONCAT('%', ?, '%') LIMIT 25`;
+        const escapedVal = field.value.replaceAll(/([%_[])/g, '[$1]');
+
+        const matches = await dbQueryAll(sql, [match.id, escapedVal]);
+        return interaction.respond(matches.map((match) => ({ name: match.alias, value: match.alias })));
       },
     },
     {
