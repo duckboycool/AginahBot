@@ -29,6 +29,7 @@ client.roleDeletedListeners = [];
 client.threadMemberListeners = [];
 client.lastTagUse = new Map(); // For cooldown, doesn't really need to be persistently stored in DB
 client.recentMessages = new Map(); // For spam bot detection
+client.purgeTimes = new Map();
 
 // Load routines and run them every 30 minutes
 fs.readdirSync('./routines').filter((file) => file.endsWith('.js')).forEach((routineFile) => {

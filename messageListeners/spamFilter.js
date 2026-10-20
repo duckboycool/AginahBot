@@ -28,6 +28,10 @@ module.exports = async (client, message) => {
     return;
   }
 
+  if (client.purgeTimes.get(message.author.id) > message.createdTimestamp - period) {
+    return;
+  }
+  
   let recent = client.recentMessages.get(message.author.id);
   if (recent == null) {
     client.recentMessages.set(message.author.id, [message]);
@@ -45,14 +49,21 @@ module.exports = async (client, message) => {
                WHERE gd.guildId=?`;
     const options = await dbQueryOne(sql, [message.guild.id]);
 
+    client.purgeTimes.set(message.author.id, message.createdTimestamp);
+
     if (options.spamPurge) {
       await message.member.timeout(60 * 60 * 1000, `Hit spam filter with ${recent.length} messages.`);
 
       // Have to delete messages one channel at a time
       const sent = new Set(recent.map((message) => message.channel));
       for (const channel of sent) {
-        await channel.bulkDelete(recent.filter((message) => message.channelId === channel.id));
-      };
+        try {
+          await channel.bulkDelete(recent.filter((message) => message.channelId === channel.id));
+        } catch (e) {
+          console.error(`Hit error while trying to purge spam messages for ${message.author.id}`);
+          console.error(e);
+        }
+      }
     }
 
     client.recentMessages.delete(message.author.id);
@@ -82,7 +93,10 @@ module.exports = async (client, message) => {
       content: content
     });
   } else {
-    // Potential for data race here, but it probabaly won't matter much
-    client.recentMessages.set(message.author.id, recent);
+    // Not really an optimal solution, but re-fetching should help with dropping messages
+    let nowRecent = client.recentMessages.get(message.author.id);
+    nowRecent = nowRecent.filter((old) => message.createdTimestamp < old.createdTimestamp + period);
+    nowRecent.push(message);
+    client.recentMessages.set(message.author.id, nowRecent);
   }
 };

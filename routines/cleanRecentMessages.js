@@ -13,5 +13,14 @@ module.exports = (client) => {
     }
   }
 
-  console.log(`Cleared spam logs from ${startLength} users to ${client.recentMessages.size}`);
+  const purgeLength = client.purgeTimes.length;
+
+  for (const [user, time] of client.purgeTimes.entries()) {
+    if (curTime > time + period) {
+      client.recentMessages.delete(user);
+    }
+  }
+
+  console.log(`Cleared spam logs from ${startLength} users to ${client.recentMessages.size} ` +
+    `(${purgeLength} to ${client.purgeTimes.length} purges)`);
 };
