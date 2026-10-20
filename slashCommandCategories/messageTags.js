@@ -1,4 +1,4 @@
-const { dbQueryOne, dbQueryAll, dbExecute, replyError } = require('../lib');
+const { dbQueryOne, dbQueryAll, dbExecute, replyError, tagNameMaxLen, tagContentMaxLen } = require('../lib');
 const { SlashCommandBuilder, InteractionContextType, MessageFlags, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
@@ -14,10 +14,12 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('tag-name')
           .setDescription('The tag to respond to')
+          .setMaxLength(tagNameMaxLen)
           .setRequired(true))
         .addStringOption((opt) => opt
           .setName('content')
           .setDescription('The text which will be displayed when a tag is found in a message')
+          .setMaxLength(tagContentMaxLen)
           .setRequired(true))
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
@@ -61,6 +63,7 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('tag-name')
           .setDescription('Name of the tag to be removed')
+          .setMaxLength(tagNameMaxLen)
           .setRequired(true))
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
@@ -124,9 +127,14 @@ module.exports = {
         let tagString = '';
         tags.forEach((tag) => tagString += `\`${tag.tagName}\`, `);
         tagString = tagString.slice(0, -2);
+        tagString = `The following tags are available on this server:\n${tagString}`;
 
         // Send the list of tags to the user
-        return interaction.reply(`The following tags are available on this server:\n${tagString}`);
+        if (tagString.length <= 2000) {
+          return interaction.reply(tagString);
+        } else {
+          return interaction.reply('Message tag list is too long to send!');
+        }
       }
     }
   ],

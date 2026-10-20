@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, InteractionContextType, PermissionFlagsBits, MessageFlags, EmbedBuilder,
   escapeMarkdown } = require('discord.js');
-const { dbExecute, dbQueryAll, dbQueryOne, verifyModRole } = require('../lib');
+const { dbExecute, dbQueryAll, dbQueryOne, verifyModRole, worldNameMaxLen, releaseLinkMaxLen } = require('../lib');
 
 const autocompleteWorld = async (interaction) => {
   const curValue = interaction.options.getString('world', true);
@@ -28,6 +28,7 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('world')
           .setDescription('Name of world')
+          .setMaxLength(worldNameMaxLen)
           .setRequired(true)
           .setAutocomplete(true))
         .setContexts(InteractionContextType.Guild),
@@ -66,6 +67,7 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('world')
           .setDescription('Name of world')
+          .setMaxLength(worldNameMaxLen)
           .setRequired(true)
           .setAutocomplete(true))
         .addChannelOption((opt) => opt
@@ -75,6 +77,7 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('release')
           .setDescription('Link to the world\'s release, or text describing why one is unavailable')
+          .setMaxLength(releaseLinkMaxLen)
           .setRequired(false))
         .addStringOption((opt) => opt
           .setName('channel-id')
@@ -137,6 +140,7 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('world')
           .setDescription('Name of world')
+          .setMaxLength(worldNameMaxLen)
           .setRequired(true)
           .setAutocomplete(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
@@ -182,6 +186,7 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('alias')
           .setDescription('Alias for the world. Like world names, searches match by any substring')
+          .setMaxLength(worldNameMaxLen)
           .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
         .setContexts(InteractionContextType.Guild),
@@ -221,11 +226,13 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('world')
           .setDescription('Name of world')
+          .setMaxLength(worldNameMaxLen)
           .setRequired(true)
           .setAutocomplete(true))
         .addStringOption((opt) => opt
           .setName('alias')
           .setDescription('Alias to remove for the world')
+          .setMaxLength(worldNameMaxLen)
           .setRequired(true)
           .setAutocomplete(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)

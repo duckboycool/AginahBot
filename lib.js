@@ -151,6 +151,16 @@ dbConnectionPool.on('connection', (connection) => {
 });
 
 module.exports = {
+  // DB size constraints
+  categoryNameMaxLen: 128,
+  categoryDescMaxLen: 128,
+  eventCodeLen: 6,
+  eventTitleMaxLen: 100,
+  tagNameMaxLen: 32,
+  tagContentMaxLen: 1024,
+  worldNameMaxLen: 255,
+  releaseLinkMaxLen: 255,
+
   managesThread: async (guildId, channel, member) => {
     if (channel.ownerId === member.id) {
       return true;

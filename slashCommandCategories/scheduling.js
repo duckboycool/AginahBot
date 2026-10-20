@@ -3,7 +3,7 @@ const { SlashCommandBuilder, InteractionContextType, MessageFlags, PermissionFla
   ActionRowBuilder } = require('discord.js');
 const { generalErrorHandler } = require('../errorHandlers');
 const { dbQueryOne, dbQueryAll, dbExecute, updateScheduleBoards, verifyModRole, verifyChannelPermissions,
-  formatPermissionList, replyError } = require('../lib');
+  formatPermissionList, replyError, eventCodeLen, eventTitleMaxLen } = require('../lib');
 const forbiddenWords = require('../assets/forbiddenWords.json');
 
 const isRolePingable = async (guildId, role) => {
@@ -38,12 +38,12 @@ const isRolePingable = async (guildId, role) => {
 const generateEventCode = () => {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   let code = '';
-  for(let i=0; i<6; ++i){
+  for (let i = 0; i < eventCodeLen; i++){
     code += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
   }
 
   // Do not generate codes with offensive words
-  for(let word of forbiddenWords){
+  for (let word of forbiddenWords) {
     if (code.search(word.toUpperCase()) > -1) { return generateEventCode(); }
   }
 
@@ -386,7 +386,7 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('title')
           .setDescription('Title for this event')
-          .setMaxLength(100)
+          .setMaxLength(eventTitleMaxLen)
           .setRequired(true))
         .addNumberOption(buildDuration)
         .addRoleOption((opt) => opt
@@ -521,7 +521,7 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('title')
           .setDescription('Title for this event')
-          .setMaxLength(100)
+          .setMaxLength(eventTitleMaxLen)
           .setRequired(true))
         .addNumberOption(buildDuration)
         .addRoleOption((opt) => opt
@@ -552,7 +552,7 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('title')
           .setDescription('Title for this event')
-          .setMaxLength(100)
+          .setMaxLength(eventTitleMaxLen)
           .setRequired(true))
         .addNumberOption(buildDuration)
         .addRoleOption((opt) => opt
@@ -575,9 +575,9 @@ module.exports = {
         .setDescription('Alter the start time of a scheduled event.')
         .addStringOption((opt) => opt
           .setName('event-code')
-          .setDescription('Six character code of the upcoming event you wish to reschedule')
-          .setMinLength(6)
-          .setMaxLength(6)
+          .setDescription(`${eventCodeLen} character code of the upcoming event you wish to reschedule`)
+          .setMinLength(eventCodeLen)
+          .setMaxLength(eventCodeLen)
           .setRequired(true)
           .setAutocomplete(true))
         .addNumberOption(buildDuration)
@@ -699,9 +699,9 @@ module.exports = {
         .setDescription('Cancel your upcoming event.')
         .addStringOption((opt) => opt
           .setName('event-code')
-          .setDescription('Six character code of the upcoming event you wish to cancel')
-          .setMinLength(6)
-          .setMaxLength(6)
+          .setDescription(`${eventCodeLen} character code of the upcoming event you wish to cancel`)
+          .setMinLength(eventCodeLen)
+          .setMaxLength(eventCodeLen)
           .setRequired(true)
           .setAutocomplete(true))
         .setContexts(InteractionContextType.Guild),

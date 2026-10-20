@@ -1,5 +1,7 @@
 const mysql = require('mysql2');
 const config = require('./config.json');
+const { categoryNameMaxLen, categoryDescMaxLen, eventCodeLen, eventTitleMaxLen, tagNameMaxLen, tagContentMaxLen,
+  worldNameMaxLen, releaseLinkMaxLen } = require('./lib');
 
 const guildData = `CREATE TABLE IF NOT EXISTS guild_data (
     id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -17,7 +19,7 @@ const roleSystems = `CREATE TABLE IF NOT EXISTS role_systems (
 const roleCategories = `CREATE TABLE IF NOT EXISTS role_categories (
     id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     roleSystemId BIGINT NOT NULL,
-    categoryName VARCHAR(128) NOT NULL,
+    categoryName VARCHAR(${categoryNameMaxLen}) NOT NULL,
     messageId VARCHAR(64) NOT NULL
 )`;
 
@@ -26,7 +28,7 @@ const roles = `CREATE TABLE IF NOT EXISTS roles (
     categoryId BIGINT NOT NULL,
     roleId VARCHAR(64) NOT NULL UNIQUE KEY,
     reaction VARCHAR(128) NOT NULL,
-    description VARCHAR(128),
+    description VARCHAR(${categoryDescMaxLen}),
     position TINYINT(2) NOT NULL
 )`;
 
@@ -53,8 +55,8 @@ const scheduledEvents = `CREATE TABLE IF NOT EXISTS scheduled_events (
     messageId VARCHAR(64) NOT NULL,
     threadId VARCHAR(64),
     schedulingUserId VARCHAR(64) NOT NULL,
-    eventCode VARCHAR(6) NOT NULL,
-    title VARCHAR(100),
+    eventCode VARCHAR(${eventCodeLen}) NOT NULL,
+    title VARCHAR(${eventTitleMaxLen}),
     duration BIGINT UNSIGNED
 )`;
 
@@ -86,8 +88,8 @@ const modContactChannels = `CREATE TABLE IF NOT EXISTS mod_contact_channels (
 const messageTags = `CREATE TABLE IF NOT EXISTS message_tags (
     id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     guildDataId BIGINT NOT NULL,
-    tagName VARCHAR(32) NOT NULL,
-    tagContent TEXT(1024) NOT NULL,
+    tagName VARCHAR(${tagNameMaxLen}) NOT NULL,
+    tagContent TEXT(${tagContentMaxLen}) NOT NULL,
     createdByUserId VARCHAR(64) NOT NULL,
     createdTime BIGINT NOT NULL DEFAULT (UNIX_TIMESTAMP()),
     UNIQUE KEY guildDataId (guildDataId, tagName)
@@ -98,8 +100,8 @@ const guildOptions = `CREATE TABLE IF NOT EXISTS guild_options (
   guildDataId BIGINT UNSIGNED NOT NULL,
   eventThreads TINYINT(1) NOT NULL DEFAULT 0,
   roleWhitelist TINYINT(1) NOT NULL DEFAULT 0,
-  messageHistoryChannelId VARCHAR(128),
-  alertsChannelId VARCHAR(128),
+  messageHistoryChannelId VARCHAR(64),
+  alertsChannelId VARCHAR(64),
   spamPurge TINYINT(1) NOT NULL DEFAULT 0,
   UNIQUE KEY guildDataId (guildDataId)
 )`;
@@ -140,15 +142,15 @@ const scheduleBoards = `CREATE TABLE IF NOT EXISTS schedule_boards (
 
 const apworldInfo = `CREATE TABLE IF NOT EXISTS apworld_info (
     id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    worldName VARCHAR(255) NOT NULL,
-    releaseLink VARCHAR(255) NOT NULL,
+    worldName VARCHAR(${worldNameMaxLen}) NOT NULL,
+    releaseLink VARCHAR(${releaseLinkMaxLen}) NOT NULL,
     channelId VARCHAR(64) NOT NULL
 )`;
 
 const apworldAlaises = `CREATE TABLE IF NOT EXISTS apworld_aliases (
     id BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     worldId BIGINT NOT NULL,
-    alias VARCHAR(255) NOT NULL
+    alias VARCHAR(${worldNameMaxLen}) NOT NULL
 )`;
 
 // From ArchipelaBot, probably will be removed eventually

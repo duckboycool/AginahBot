@@ -1,4 +1,5 @@
-const { parseEmoji, dbQueryOne, dbQueryAll, dbExecute, updateCategoryMessage, replyError } = require('../lib');
+const { parseEmoji, dbQueryOne, dbQueryAll, dbExecute, updateCategoryMessage, replyError,
+  categoryNameMaxLen, categoryDescMaxLen } = require('../lib');
 const { ChannelType, PermissionsBitField, SlashCommandBuilder, InteractionContextType, PermissionFlagsBits,
   MessageFlags } = require('discord.js');
 
@@ -121,6 +122,7 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('category-name')
           .setDescription('Name of the new category')
+          .setMaxLength(categoryNameMaxLen)
           .setRequired(true))
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
@@ -177,11 +179,13 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('old-name')
           .setDescription('Current name of the category you wish to rename')
+          .setMaxLength(categoryNameMaxLen)
           .setRequired(true)
           .setAutocomplete(true))
         .addStringOption((opt) => opt
           .setName('new-name')
           .setDescription('New name of the category')
+          .setMaxLength(categoryNameMaxLen)
           .setRequired(true))
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
@@ -221,6 +225,7 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('category-name')
           .setDescription('Name of the category you wish to remove')
+          .setMaxLength(categoryNameMaxLen)
           .setRequired(true)
           .setAutocomplete(true))
         .setContexts(InteractionContextType.Guild)
@@ -268,6 +273,7 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('category-name')
           .setDescription('Name of the category to refresh')
+          .setMaxLength(categoryNameMaxLen)
           .setRequired(true)
           .setAutocomplete(true))
         .setContexts(InteractionContextType.Guild)
@@ -311,6 +317,7 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('category-name')
           .setDescription('The category your new role should be placed into')
+          .setMaxLength(categoryNameMaxLen)
           .setRequired(true)
           .setAutocomplete(true))
         .addRoleOption((opt) => opt
@@ -324,6 +331,7 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('description')
           .setDescription('An optional description to associate with the role')
+          .setMaxLength(categoryDescMaxLen)
           .setRequired(false))
         .addIntegerOption((opt) => opt
           .setName('position')
@@ -457,6 +465,7 @@ module.exports = {
         .addStringOption((opt) => opt
           .setName('category-name')
           .setDescription('Name of the category containing the target role')
+          .setMaxLength(categoryNameMaxLen)
           .setRequired(true)
           .setAutocomplete(true))
         .addRoleOption((opt) => opt
