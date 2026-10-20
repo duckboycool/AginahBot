@@ -403,8 +403,12 @@ module.exports = {
       return emojiObj ? emojiObj : null;
     }
 
-    const nodeEmoji = require('node-emoji');
-    return nodeEmoji.has(emoji) ? emoji : null;
+    const emojilib = require('emojilib');
+    // Lib doesn't count regional indicators, but they should be usable
+    const regionalIndicator = (emoji.length === 2 &&
+      emoji.charCodeAt(0) === 55356 && emoji.charCodeAt(1) >= 56806 && emoji.charCodeAt(1) <= 56831);
+
+    return Object.hasOwn(emojilib, emoji) || regionalIndicator ? emoji : null;
   },
 
   cachePartial: (partial) => new Promise((resolve, reject) => {
