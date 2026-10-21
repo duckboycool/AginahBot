@@ -82,7 +82,7 @@ module.exports = {
         .setContexts(InteractionContextType.Guild)
         .setDefaultMemberPermissions(0),
       async execute(interaction) {
-        let sql = `SELECT rs.id, rs.roleRequestChannelId FROM role_systems rs
+        let sql = `SELECT rs.id FROM role_systems rs
                     JOIN guild_data gd ON rs.guildDataId = gd.id
                     WHERE gd.guildId=?`;
         const roleSystem = await dbQueryOne(sql, [interaction.guildId]);
@@ -106,10 +106,13 @@ module.exports = {
           await dbExecute('DELETE FROM role_categories WHERE roleSystemId=?', [roleSystem.id]);
           await dbExecute('DELETE FROM role_systems WHERE id=?', [roleSystem.id]);
 
-          return interaction.followUp('Role system disabled.');
+          return interaction.reply('Role system disabled.');
         } catch (e) {
           console.error(e);
-          return interaction.followUp(replyError('Something went wrong and the role system could not be destroyed.\n'));
+          return interaction.reply({
+            content: replyError('Something went wrong and the role system could not be destroyed.\n'),
+            flags: MessageFlags.Ephemeral,
+          });
         }
       }
     },
